@@ -1,0 +1,105 @@
+[% PROCESS settings/header.html %]
+
+<!--
+    HQPlayer plugin settings page.
+    Template Toolkit template rendered by Slim::Web::Settings.
+    Variables injected by Settings.pm::handler().
+-->
+
+<h2>[% 'HQPLAYER_SETTINGS' | string %]</h2>
+
+[% IF params.saved %]
+<div class="status-message success" role="alert">
+    [% 'HQPLAYER_SAVED' | string %]
+</div>
+[% END %]
+
+[% IF params.errors && params.errors.size %]
+<div class="status-message error" role="alert">
+    <ul>
+    [% FOREACH err IN params.errors %]
+        <li>[% err | string %]</li>
+    [% END %]
+    </ul>
+</div>
+[% END %]
+
+<form method="post" action="[% params.webroot %]plugins/HQPlayer/settings/basic.html">
+    <input type="hidden" name="saveSettings" value="1" />
+
+    <!-- Config file path -->
+    <div class="setting">
+        <label for="pref_config_path">
+            [% 'HQPLAYER_CONFIG_PATH' | string %]
+        </label>
+        <input
+            type="text"
+            id="pref_config_path"
+            name="pref_config_path"
+            value="[% params.pref_config_path | html %]"
+            required
+            placeholder="/etc/hqplayer/config.yaml"
+            size="50"
+        />
+        <p class="field-desc">[% 'HQPLAYER_CONFIG_PATH_DESC' | string %]</p>
+    </div>
+
+    <!-- Bind host -->
+    <div class="setting">
+        <label for="pref_lms_host">
+            [% 'HQPLAYER_LMS_HOST' | string %]
+        </label>
+        <input
+            type="text"
+            id="pref_lms_host"
+            name="pref_lms_host"
+            value="[% params.pref_lms_host | html %]"
+            required
+            pattern="^(\d{1,3}\.){3}\d{1,3}$|^[0-9a-fA-F:]+$"
+            placeholder="127.0.0.1"
+            size="20"
+        />
+        <p class="field-desc">[% 'HQPLAYER_LMS_HOST_DESC' | string %]</p>
+    </div>
+
+    <!-- Port -->
+    <div class="setting">
+        <label for="pref_lms_port">
+            [% 'HQPLAYER_LMS_PORT' | string %]
+        </label>
+        <input
+            type="number"
+            id="pref_lms_port"
+            name="pref_lms_port"
+            value="[% params.pref_lms_port | html %]"
+            required
+            min="1"
+            max="65535"
+            step="1"
+        />
+        <p class="field-desc">[% 'HQPLAYER_LMS_PORT_DESC' | string %]</p>
+    </div>
+
+    <!-- Log level -->
+    <div class="setting">
+        <label for="pref_log_level">
+            [% 'HQPLAYER_LOG_LEVEL' | string %]
+        </label>
+        <select id="pref_log_level" name="pref_log_level" required>
+            [% FOREACH lvl IN ['trace', 'debug', 'info', 'warn', 'error'] %]
+            <option value="[% lvl %]"
+                [% IF params.pref_log_level == lvl %]selected="selected"[% END %]>
+                [% lvl %]
+            </option>
+            [% END %]
+        </select>
+        <p class="field-desc">[% 'HQPLAYER_LOG_LEVEL_DESC' | string %]</p>
+    </div>
+
+    <div class="setting">
+        <input type="submit" value="[% 'HQPLAYER_SAVE' | string %]" />
+    </div>
+
+</form>
+
+[% PROCESS settings/footer.html %]
