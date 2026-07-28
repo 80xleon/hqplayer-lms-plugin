@@ -98,6 +98,10 @@ HQPLAYER_SECTION_HQP
 	EN	HQPlayer Embedded Connection
 	FR	Connexion HQPlayer Embedded
 
+HQPLAYER_SECTION_PLAYER
+	EN	Virtual Player
+	FR	Lecteur Virtuel
+
 HQPLAYER_HQP_STATUS
 	EN	HQPlayer status
 	FR	État HQPlayer
@@ -161,3 +165,15 @@ HQPLAYER_ERR_HQP_TIMEOUT
 HQPLAYER_ERR_HQP_POLL
 	EN	Invalid poll interval: must be a positive integer (milliseconds).
 	FR	Intervalle de scrutation invalide : doit être un entier positif (millisecondes).
+
+HQPLAYER_PLAYER_NAME
+	EN	Virtual player name
+	FR	Nom du lecteur virtuel
+
+HQPLAYER_PLAYER_NAME_DESC
+	EN	Name shown for the HQPlayer virtual player in the LMS player selector (Material skin and others).
+	FR	Nom affiché pour le lecteur virtuel HQPlayer dans le sélecteur de lecteur LMS (skin Material et autres).
+
+HQPLAYER_ERR_PLAYER_NAME
+	EN	Player name must not be empty.
+	FR	Le nom du lecteur ne peut pas être vide.

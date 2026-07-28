@@ -95,7 +95,17 @@ LmsStatus LmsBridge::currentStatus() const {
 
 void LmsBridge::updateCachedStatus(const ::hqplayer::hqplayer::HQPlayerStatus& status) {
     std::lock_guard<std::mutex> lock(mutex_);
-    cached_.state         = stateToString(status.state);
+    const std::string newState = stateToString(status.state);
+
+    // Detect Playing→Stopped transition and set the track-ended flag so
+    // the Perl polling loop can advance the LMS queue.
+    if (cached_.state == "playing" && newState == "stopped") {
+        track_ended_flag_ = true;
+        Logger::instance().log(LogLevel::Info,
+            "LmsBridge: Playing→Stopped transition detected — track ended");
+    }
+
+    cached_.state         = newState;
     cached_.track_title   = status.track_title;
     cached_.samplerate_hz = status.samplerate_hz;
     cached_.bitdepth      = status.bitdepth;
@@ -120,6 +130,38 @@ void LmsBridge::handleAlbumPlay(const std::string& albumPath) {
     throw std::runtime_error(
         "Album playback is not yet supported: HQPlayer Embedded does not expose "
         "a native album-play XML command. Load a playlist via HQPlayer's own interface.");
+}
+
+void LmsBridge::handleTrackLoad(const std::string& filePath) {
+    if (filePath.empty()) {
+        throw std::invalid_argument("Track path must not be empty");
+    }
+
+    Logger::instance().log(LogLevel::Info,
+        "LmsBridge: LoadTrack '" + filePath + "'");
+
+    // Reset the track-ended flag: a new track is starting so any previous
+    // "track ended" signal is no longer relevant.
+    {
+        std::lock_guard<std::mutex> lock(mutex_);
+        track_ended_flag_ = false;
+    }
+
+    try {
+        client_.loadTrack(filePath);
+        setOptimisticState("playing");
+    } catch (const std::exception& e) {
+        Logger::instance().log(LogLevel::Warn,
+            "LmsBridge: LoadTrack failed — " + std::string(e.what()));
+        throw;
+    }
+}
+
+bool LmsBridge::consumeTrackEnded() {
+    std::lock_guard<std::mutex> lock(mutex_);
+    const bool v = track_ended_flag_;
+    track_ended_flag_ = false;
+    return v;
 }
 
 } // namespace hqplayer::lms

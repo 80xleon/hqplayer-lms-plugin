@@ -34,7 +34,7 @@ sub page { 'plugins/HQPlayer/settings/basic.html' }
 # prefs — list of preference keys managed by this settings page.
 # ---------------------------------------------------------------------------
 sub prefs {
-    return ( $prefs, qw(config_path lms_host lms_port log_level hqplayer_host hqplayer_port hqplayer_timeout_ms hqplayer_poll_ms) );
+    return ( $prefs, qw(config_path lms_host lms_port log_level hqplayer_host hqplayer_port hqplayer_timeout_ms hqplayer_poll_ms player_name) );
 }
 
 # ---------------------------------------------------------------------------
@@ -74,6 +74,7 @@ sub handler {
     $params->{'pref_hqplayer_port'}       = $prefs->get('hqplayer_port');
     $params->{'pref_hqplayer_timeout_ms'} = $prefs->get('hqplayer_timeout_ms');
     $params->{'pref_hqplayer_poll_ms'}    = $prefs->get('hqplayer_poll_ms');
+    $params->{'pref_player_name'}         = $prefs->get('player_name');
 
     # Probe the LMS adapter daemon and inject reachability into the template.
     my $reachable = _probeDaemon( $prefs->get('lms_host'), $prefs->get('lms_port') );
@@ -134,6 +135,9 @@ sub _validate {
         push @errors, 'HQPLAYER_ERR_HQP_POLL';
     }
 
+    my $player_name = _trim( $params->{'pref_player_name'} // '' );
+    push @errors, 'HQPLAYER_ERR_PLAYER_NAME' unless length $player_name;
+
     return @errors;
 }
 
@@ -151,6 +155,7 @@ sub _persistPrefs {
     $prefs->set( 'hqplayer_port',        int( $params->{'pref_hqplayer_port'} ) );
     $prefs->set( 'hqplayer_timeout_ms',  int( $params->{'pref_hqplayer_timeout_ms'} ) );
     $prefs->set( 'hqplayer_poll_ms',     int( $params->{'pref_hqplayer_poll_ms'} ) );
+    $prefs->set( 'player_name',          _trim( $params->{'pref_player_name'} ) );
 }
 
 # ---------------------------------------------------------------------------

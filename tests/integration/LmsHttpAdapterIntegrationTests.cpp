@@ -27,6 +27,7 @@ struct NullHQPlayerClient final : hqplayer::hqplayer::IHQPlayerClient {
     void stop()  override {}
     void next()  override {}
     void prev()  override {}
+    void loadTrack(const std::string&) override {}
     hqplayer::hqplayer::HQPlayerStatus getStatus() override { return {}; }
 };
 
@@ -174,12 +175,83 @@ void testInvalidHostAtStart() {
     assertTrue(thrown, "invalid host should fail adapter start");
 }
 
+void testTrackEndpoint() {
+    NullHQPlayerClient nullClient;
+    hqplayer::lms::LmsBridge bridge(nullClient);
+    hqplayer::lms::LmsHttpAdapter adapter(bridge, "127.0.0.1", 0);
+    adapter.start();
+
+    const auto port = adapter.boundPort();
+
+    // Valid path — returns 200 ok.
+    auto resp = sendRequest(port, http::verb::post, "/lms/track",
+                            R"({"path":"/music/Artist/Album/01.flac"})");
+    assertTrue(resp.result() == http::status::ok,
+               "POST /lms/track with valid path should return 200");
+    assertTrue(resp.body() == "{\"ok\":true}",
+               "POST /lms/track response should be {\"ok\":true}");
+
+    // After loadTrack, status should be optimistically playing.
+    auto status = sendRequest(port, http::verb::get, "/lms/status");
+    assertTrue(status.body().find("\"state\":\"playing\"") != std::string::npos,
+               "status after /lms/track should be playing (optimistic)");
+
+    // Missing path field — 400.
+    auto missingPath = sendRequest(port, http::verb::post, "/lms/track", R"({"other":"x"})");
+    assertTrue(missingPath.result() == http::status::bad_request,
+               "POST /lms/track without path should return 400");
+
+    // Empty body — 400.
+    auto emptyBody = sendRequest(port, http::verb::post, "/lms/track", "");
+    assertTrue(emptyBody.result() == http::status::bad_request,
+               "POST /lms/track with empty body should return 400");
+
+    adapter.stop();
+}
+
+void testTrackEndedFlag() {
+    NullHQPlayerClient nullClient;
+    hqplayer::lms::LmsBridge bridge(nullClient);
+    hqplayer::lms::LmsHttpAdapter adapter(bridge, "127.0.0.1", 0);
+    adapter.start();
+
+    const auto port = adapter.boundPort();
+
+    // Seed status: simulate HQPlayer reporting Playing, then Stopped.
+    hqplayer::hqplayer::HQPlayerStatus playing;
+    playing.state = hqplayer::hqplayer::HQPlayerState::Playing;
+    bridge.updateCachedStatus(playing);
+
+    auto status = sendRequest(port, http::verb::get, "/lms/status");
+    assertTrue(status.body().find("\"track_ended\":false") != std::string::npos,
+               "track_ended should be false while playing");
+
+    // Transition: Playing → Stopped.
+    hqplayer::hqplayer::HQPlayerStatus stopped;
+    stopped.state = hqplayer::hqplayer::HQPlayerState::Stopped;
+    bridge.updateCachedStatus(stopped);
+
+    // First GET after the transition should return track_ended:true and reset.
+    status = sendRequest(port, http::verb::get, "/lms/status");
+    assertTrue(status.body().find("\"track_ended\":true") != std::string::npos,
+               "track_ended should be true on first GET after Playing→Stopped");
+
+    // Second GET should have reset the flag back to false.
+    status = sendRequest(port, http::verb::get, "/lms/status");
+    assertTrue(status.body().find("\"track_ended\":false") != std::string::npos,
+               "track_ended should reset to false after being consumed");
+
+    adapter.stop();
+}
+
 } // namespace
 
 int main() {
     try {
         testEndpoints();
         testAlbumEndpoint();
+        testTrackEndpoint();
+        testTrackEndedFlag();
         testInvalidHostAtStart();
         return 0;
     } catch (const std::exception& e) {

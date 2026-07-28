@@ -155,10 +155,12 @@ std::uint16_t LmsHttpAdapter::boundPort() const {
 
 std::string LmsHttpAdapter::statusJson() const {
     const auto status = bridge_.currentStatus();
+    const bool ended  = bridge_.consumeTrackEnded();
     return std::string("{\"state\":\"") + escapeJson(status.state) +
            "\",\"track_title\":\"" + escapeJson(status.track_title) +
            "\",\"samplerate_hz\":" + std::to_string(status.samplerate_hz) +
-           ",\"bitdepth\":" + std::to_string(status.bitdepth) + "}";
+           ",\"bitdepth\":" + std::to_string(status.bitdepth) +
+           ",\"track_ended\":" + (ended ? "true" : "false") + "}";
 }
 
 void LmsHttpAdapter::run() {
@@ -253,6 +255,26 @@ void LmsHttpAdapter::run() {
             } else if (request.method() == http::verb::post && request.target() == "/lms/prev") {
                 bridge_.handleCommand(LmsCommand::PrevTrack);
                 response = makeJsonResponse(http::status::ok, "{\"ok\":true}");
+            } else if (request.method() == http::verb::post && request.target() == "/lms/track") {
+                const auto path = extractJsonStringField(request.body(), "path");
+                if (!path.has_value() || path->empty()) {
+                    response = makeJsonResponse(
+                        http::status::bad_request,
+                        "{\"error\":\"missing or empty \\\"path\\\" field\"}");
+                } else {
+                    try {
+                        bridge_.handleTrackLoad(*path);
+                        response = makeJsonResponse(http::status::ok, "{\"ok\":true}");
+                    } catch (const std::invalid_argument& e) {
+                        response = makeJsonResponse(
+                            http::status::bad_request,
+                            "{\"error\":\"" + escapeJson(e.what()) + "\"}");
+                    } catch (const std::exception& e) {
+                        response = makeJsonResponse(
+                            http::status::bad_gateway,
+                            "{\"error\":\"" + escapeJson(e.what()) + "\"}");
+                    }
+                }
             } else if (request.method() == http::verb::post && request.target() == "/lms/album") {
                 const auto path = extractJsonStringField(request.body(), "path");
                 if (!path.has_value() || path->empty()) {

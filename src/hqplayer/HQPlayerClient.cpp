@@ -253,6 +253,28 @@ void HQPlayerClient::prev() {
     verifyResult(response, "Prev");
 }
 
+void HQPlayerClient::loadTrack(const std::string& filePath) {
+    if (filePath.empty()) {
+        throw HQPlayerError("loadTrack: filePath must not be empty");
+    }
+
+    Logger::instance().log(LogLevel::Info, "Loading track in HQPlayer: " + filePath);
+
+    // HQPlayer Embedded XML/TCP API: load a file via <Load src="<path>"/>.
+    // The src attribute accepts an absolute filesystem path.  Both the LMS
+    // host and the HQPlayer Embedded host must have access to the same path
+    // (e.g. via a shared NAS mount).
+    //
+    // Expected response: <Load result="OK"/>
+    const std::string loadCmd = "<Load src=\"" + filePath + "\"/>";
+    const auto loadResponse = sendAndReceive(loadCmd);
+    verifyResult(loadResponse, "Load");
+
+    // Start playback immediately after loading.
+    const auto playResponse = sendAndReceive("<Play/>");
+    verifyResult(playResponse, "Play");
+}
+
 HQPlayerStatus HQPlayerClient::getStatus() {
     const auto response = sendAndReceive("<Status/>");
     return parseStatusXml(response);

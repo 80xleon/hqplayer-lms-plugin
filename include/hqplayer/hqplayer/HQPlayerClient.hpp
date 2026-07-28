@@ -42,6 +42,12 @@ public:
     /// @throws HQPlayerError on network or protocol error.
     void prev() override;
 
+    /// Load a single audio file and begin playback via HQPlayer.
+    ///
+    /// Sends <Load src="<filePath>"/> then <Play/> to HQPlayer Embedded.
+    /// @throws HQPlayerError on network or protocol error.
+    void loadTrack(const std::string& filePath) override;
+
     /// Query the current HQPlayer status.
     /// @return Parsed HQPlayerStatus.
     /// @throws HQPlayerError on network or protocol error.

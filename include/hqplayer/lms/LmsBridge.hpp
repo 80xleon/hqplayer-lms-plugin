@@ -32,6 +32,12 @@ public:
     /// @return The most recently cached LMS status.
     LmsStatus currentStatus() const override;
 
+    /// Load a single track by filesystem path and start playback.
+    ///
+    /// @throws std::invalid_argument if @p filePath is empty.
+    /// @throws std::runtime_error   if the HQPlayer backend cannot fulfil the request.
+    void handleTrackLoad(const std::string& filePath) override;
+
     /// Attempt to play an album by filesystem path.
     ///
     /// Validates @p albumPath (non-empty) then forwards to the HQPlayer client.
@@ -40,7 +46,17 @@ public:
     void handleAlbumPlay(const std::string& albumPath) override;
 
     /// Update the cached status from an external source (e.g. HQPlayerSync).
+    ///
+    /// Detects Playing→Stopped transitions and sets an internal flag that
+    /// consumeTrackEnded() can read.
     void updateCachedStatus(const ::hqplayer::hqplayer::HQPlayerStatus& status);
+
+    /// Atomically read and reset the track-ended flag.
+    ///
+    /// Returns true once when a Playing→Stopped transition was detected since
+    /// the last call.  Subsequent calls return false until the next transition.
+    /// Called by LmsHttpAdapter when building the /lms/status JSON response.
+    bool consumeTrackEnded();
 
 private:
     void setOptimisticState(const std::string& state);
@@ -48,6 +64,7 @@ private:
     ::hqplayer::hqplayer::IHQPlayerClient& client_;
     mutable std::mutex                     mutex_;
     LmsStatus                              cached_{};
+    bool                                   track_ended_flag_{false};
 };
 
 } // namespace hqplayer::lms

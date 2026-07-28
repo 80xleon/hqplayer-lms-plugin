@@ -201,6 +201,28 @@
         <p class="field-desc">[% 'HQPLAYER_HQP_POLL_DESC' | string %]</p>
     </div>
 
+    <!-- ------------------------------------------------------------------ -->
+    <!-- Section: Virtual player                                            -->
+    <!-- ------------------------------------------------------------------ -->
+    <h3>[% 'HQPLAYER_SECTION_PLAYER' | string %]</h3>
+
+    <!-- Virtual player name -->
+    <div class="setting">
+        <label for="pref_player_name">
+            [% 'HQPLAYER_PLAYER_NAME' | string %]
+        </label>
+        <input
+            type="text"
+            id="pref_player_name"
+            name="pref_player_name"
+            value="[% params.pref_player_name | html %]"
+            required
+            placeholder="HQPlayer"
+            size="30"
+        />
+        <p class="field-desc">[% 'HQPLAYER_PLAYER_NAME_DESC' | string %]</p>
+    </div>
+
     <div class="setting">
         <input type="submit" value="[% 'HQPLAYER_SAVE' | string %]" />
     </div>

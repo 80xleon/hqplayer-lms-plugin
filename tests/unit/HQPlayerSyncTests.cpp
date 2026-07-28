@@ -35,6 +35,7 @@ struct MockHQPlayerClient final : hqplayer::hqplayer::IHQPlayerClient {
     void stop()  override { ++stopCalls; }
     void next()  override { ++nextCalls; }
     void prev()  override { ++prevCalls; }
+    void loadTrack(const std::string&) override { ++loadTrackCalls; }
 
     hqplayer::hqplayer::HQPlayerStatus getStatus() override {
         ++statusCalls;
@@ -51,6 +52,7 @@ struct MockHQPlayerClient final : hqplayer::hqplayer::IHQPlayerClient {
     std::atomic<int> stopCalls{0};
     std::atomic<int> nextCalls{0};
     std::atomic<int> prevCalls{0};
+    std::atomic<int> loadTrackCalls{0};
     bool shouldThrow{false};
 };
 

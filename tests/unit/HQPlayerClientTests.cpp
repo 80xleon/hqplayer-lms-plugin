@@ -206,6 +206,104 @@ void testPrevCommandSendsCorrectXml() {
                "prev() should send <Prev/> XML command");
 }
 
+// ---------------------------------------------------------------------------
+// Mock server that serves two sequential connections (used by loadTrack which
+// sends Load then Play as separate TCP connections).
+// ---------------------------------------------------------------------------
+class TwoShotMockHQPlayerServer {
+public:
+    TwoShotMockHQPlayerServer(const std::string& firstResponse,
+                              const std::string& secondResponse)
+        : firstResponse_(firstResponse)
+        , secondResponse_(secondResponse)
+        , ioc_()
+        , acceptor_(ioc_) {
+
+        tcp::endpoint ep(asio::ip::address_v4::loopback(), 0);
+        boost::system::error_code ec;
+        acceptor_.open(tcp::v4(), ec);
+        acceptor_.set_option(asio::socket_base::reuse_address(true), ec);
+        acceptor_.bind(ep, ec);
+        acceptor_.listen(2, ec);
+        port_ = acceptor_.local_endpoint().port();
+
+        serverThread_ = std::thread([this] { serveTwo(); });
+    }
+
+    ~TwoShotMockHQPlayerServer() {
+        boost::system::error_code ec;
+        acceptor_.cancel(ec);
+        acceptor_.close(ec);
+        if (serverThread_.joinable()) {
+            serverThread_.join();
+        }
+    }
+
+    std::uint16_t port() const noexcept { return port_; }
+    const std::string& firstReceivedCommand()  const noexcept { return firstCommand_; }
+    const std::string& secondReceivedCommand() const noexcept { return secondCommand_; }
+
+private:
+    void serveOne(const std::string& response, std::string& receivedCommand) {
+        boost::system::error_code ec;
+        tcp::socket socket(ioc_);
+        acceptor_.accept(socket, ec);
+        if (ec) { return; }
+        std::array<char, 4096> buf{};
+        const std::size_t n = socket.read_some(asio::buffer(buf), ec);
+        if (n > 0) { receivedCommand.assign(buf.data(), n); }
+        asio::write(socket, asio::buffer(response), ec);
+        socket.shutdown(tcp::socket::shutdown_both, ec);
+        socket.close(ec);
+    }
+
+    void serveTwo() {
+        serveOne(firstResponse_,  firstCommand_);
+        serveOne(secondResponse_, secondCommand_);
+    }
+
+    std::string       firstResponse_;
+    std::string       secondResponse_;
+    asio::io_context  ioc_;
+    tcp::acceptor     acceptor_;
+    std::uint16_t     port_{0};
+    std::thread       serverThread_;
+    std::string       firstCommand_;
+    std::string       secondCommand_;
+};
+
+void testLoadTrackCommandSendsCorrectXml() {
+    const std::string loadResponse =
+        R"(<?xml version="1.0" encoding="UTF-8"?><Load result="OK"/>)";
+    const std::string playResponse =
+        R"(<?xml version="1.0" encoding="UTF-8"?><Play result="OK"/>)";
+
+    TwoShotMockHQPlayerServer server(loadResponse, playResponse);
+    hqplayer::hqplayer::HQPlayerClient client(makeConfig(server.port()));
+
+    client.loadTrack("/music/Artist/Album/01.flac");
+
+    assertTrue(server.firstReceivedCommand().find("<Load src=\"/music/Artist/Album/01.flac\"/>")
+               != std::string::npos,
+               "loadTrack() should send <Load src=\"...\"/> as first command");
+
+    assertTrue(server.secondReceivedCommand().find("<Play/>") != std::string::npos,
+               "loadTrack() should send <Play/> as second command after Load");
+}
+
+void testLoadTrackEmptyPathThrows() {
+    hqplayer::hqplayer::HQPlayerClient client(makeConfig(19999));
+    bool thrown = false;
+    try {
+        client.loadTrack("");
+    } catch (const hqplayer::hqplayer::HQPlayerError& e) {
+        thrown = true;
+        const std::string msg = e.what();
+        assertTrue(!msg.empty(), "HQPlayerError from empty path should have message");
+    }
+    assertTrue(thrown, "loadTrack('') should throw HQPlayerError");
+}
+
 void testConnectFailureThrows() {
     hqplayer::hqplayer::HQPlayerClient client(makeConfig(19999)); // nothing listening
     bool thrown = false;
@@ -230,6 +328,8 @@ int main() {
         testStopCommandSendsCorrectXml();
         testNextCommandSendsCorrectXml();
         testPrevCommandSendsCorrectXml();
+        testLoadTrackCommandSendsCorrectXml();
+        testLoadTrackEmptyPathThrows();
         testConnectFailureThrows();
         return 0;
     } catch (const std::exception& e) {
