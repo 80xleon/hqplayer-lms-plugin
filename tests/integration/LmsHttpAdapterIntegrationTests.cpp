@@ -8,6 +8,7 @@
 #include <boost/beast/core.hpp>
 #include <boost/beast/http.hpp>
 
+#include <atomic>
 #include <chrono>
 #include <iostream>
 #include <stdexcept>
@@ -22,14 +23,29 @@ using tcp = boost::asio::ip::tcp;
 /// Minimal IHQPlayerClient that does nothing — used to isolate the HTTP
 /// adapter layer in integration tests.
 struct NullHQPlayerClient final : hqplayer::hqplayer::IHQPlayerClient {
-    void play()  override {}
-    void pause() override {}
-    void stop()  override {}
-    void next()  override {}
-    void prev()  override {}
-    void playNextUri(const std::string&) override {}
-    void loadTrack(const std::string&) override {}
-    hqplayer::hqplayer::HQPlayerStatus getStatus() override { return {}; }
+    void play()  override { ++playCalls; }
+    void pause() override { ++pauseCalls; }
+    void stop()  override { ++stopCalls; }
+    void next()  override { ++nextCalls; }
+    void prev()  override { ++prevCalls; }
+    void playNextUri(const std::string&) override { ++playNextUriCalls; }
+    void loadTrack(const std::string&) override { ++loadTrackCalls; }
+    hqplayer::hqplayer::HQPlayerStatus getStatus() override {
+        hqplayer::hqplayer::HQPlayerStatus status;
+        status.state =
+            static_cast<hqplayer::hqplayer::HQPlayerState>(reportedState.load());
+        return status;
+    }
+
+    std::atomic<int> playCalls{0};
+    std::atomic<int> pauseCalls{0};
+    std::atomic<int> stopCalls{0};
+    std::atomic<int> nextCalls{0};
+    std::atomic<int> prevCalls{0};
+    std::atomic<int> playNextUriCalls{0};
+    std::atomic<int> loadTrackCalls{0};
+    std::atomic<int> reportedState{
+        static_cast<int>(hqplayer::hqplayer::HQPlayerState::Stopped)};
 };
 
 void assertTrue(bool condition, const std::string& message) {
@@ -183,11 +199,27 @@ void testTrackEndpoint() {
                "POST /lms/track with valid path should return 200");
     assertTrue(resp.body() == "{\"ok\":true}",
                "POST /lms/track response should be {\"ok\":true}");
+    assertTrue(nullClient.stopCalls.load() == 0,
+               "stopped state should not send stop before loading track");
+    assertTrue(nullClient.playNextUriCalls.load() == 1,
+               "first /lms/track should call playNextUri exactly once");
 
     // After loadTrack, status should be optimistically playing.
     auto status = sendRequest(port, http::verb::get, "/lms/status");
     assertTrue(status.body().find("\"state\":\"playing\"") != std::string::npos,
                "status after /lms/track should be playing (optimistic)");
+
+    // If HQPlayer is already playing, /lms/track should stop current playback
+    // before loading the newly selected track.
+    nullClient.reportedState.store(static_cast<int>(hqplayer::hqplayer::HQPlayerState::Playing));
+    resp = sendRequest(port, http::verb::post, "/lms/track",
+                       R"({"path":"/music/Artist/Album/02.flac"})");
+    assertTrue(resp.result() == http::status::ok,
+               "POST /lms/track while playing should still return 200");
+    assertTrue(nullClient.stopCalls.load() == 1,
+               "playing state should trigger stop before loading new track");
+    assertTrue(nullClient.playNextUriCalls.load() == 2,
+               "second /lms/track should call playNextUri again");
 
     // Missing path field — 400.
     auto missingPath = sendRequest(port, http::verb::post, "/lms/track", R"({"other":"x"})");

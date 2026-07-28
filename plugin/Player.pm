@@ -130,7 +130,7 @@ sub prev {
 # The daemon forwards the value to HQPlayer Embedded via
 # <PlayNextUri uri="..."/> (--play-next-uri semantics):
 #   - stopped → starts playing immediately
-#   - playing → queues for gapless transition after the current track ends
+#   - playing → daemon first issues Stop, then starts the newly selected track
 # ---------------------------------------------------------------------------
 
 sub load {

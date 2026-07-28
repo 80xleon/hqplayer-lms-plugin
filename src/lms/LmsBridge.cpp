@@ -126,9 +126,26 @@ void LmsBridge::handleTrackLoad(const std::string& filePath) {
     }
 
     try {
-        // Use playNextUri (HQPe --play-next-uri semantics):
-        //  - stopped  → starts playing filePath immediately.
-        //  - playing  → queues filePath for gapless transition after current track.
+        // If HQPlayer is currently playing, stop first so the newly selected
+        // track starts immediately instead of being queued behind the current one.
+        bool isPlaying = false;
+        try {
+            const auto status = client_.getStatus();
+            isPlaying = (status.state == ::hqplayer::hqplayer::HQPlayerState::Playing);
+        } catch (const std::exception& e) {
+            Logger::instance().log(
+                LogLevel::Warn,
+                "LmsBridge: status probe before track load failed — " + std::string(e.what()));
+        }
+
+        if (isPlaying) {
+            Logger::instance().log(
+                LogLevel::Info,
+                "LmsBridge: stopping current playback before loading new track");
+            client_.stop();
+        }
+
+        // Use playNextUri to start playback for stopped state.
         client_.playNextUri(filePath);
         setOptimisticState("playing");
     } catch (const std::exception& e) {
