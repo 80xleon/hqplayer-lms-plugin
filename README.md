@@ -24,7 +24,7 @@ HQPlayer Embedded
 1. User selects the **HQPlayer** virtual player in Material skin and taps Play on an album.
 2. LMS queues all tracks and calls `load()` on the virtual player with the first track's local path.
 3. The Perl player sends `POST /lms/track {"path":"..."}` to the local daemon.
-4. The daemon sends `<Load src="..."/>` + `<Play/>` to HQPlayer Embedded via XML/TCP.
+4. The daemon sends `<PlayNextUri uri="..."/>` to HQPlayer Embedded via XML/TCP.  When stopped, playback starts immediately; when already playing, the track is queued for a gapless transition.
 5. The daemon's status poller detects the `Playing → Stopped` transition when the track ends and sets `track_ended: true` in `GET /lms/status`.
 6. The plugin's Perl polling timer reads `track_ended: true` and calls `playlist index +1` on the LMS queue.
 7. LMS calls `load()` again with the next track — repeat from step 3.
@@ -174,8 +174,6 @@ curl -s http://127.0.0.1:18080/lms/status
 curl -s -X POST http://127.0.0.1:18080/lms/play
 curl -s -X POST http://127.0.0.1:18080/lms/pause
 curl -s -X POST http://127.0.0.1:18080/lms/stop
-curl -s -X POST http://127.0.0.1:18080/lms/next
-curl -s -X POST http://127.0.0.1:18080/lms/prev
 curl -s -X POST http://127.0.0.1:18080/lms/track \
      -H 'Content-Type: application/json' \
      -d '{"path":"/music/Artist/Album/01.flac"}'
@@ -189,8 +187,6 @@ curl -s -X POST http://127.0.0.1:18080/lms/track \
 | `POST` | `/lms/play`   | Start or resume playback. |
 | `POST` | `/lms/pause`  | Pause playback. |
 | `POST` | `/lms/stop`   | Stop playback. |
-| `POST` | `/lms/next`   | Skip to next track in the current HQPlayer playlist. |
-| `POST` | `/lms/prev`   | Skip to previous track in the current HQPlayer playlist. |
-| `POST` | `/lms/track`  | Load a single file and begin playback. Body: `{"path":"/absolute/path/to/file.flac"}`. Missing or empty `path` returns `400`. HQPlayer errors return `502`. |
+| `POST` | `/lms/track`  | Load a file via `<PlayNextUri/>`.  When HQPlayer is stopped, playback starts immediately; when already playing, the track is queued for a gapless transition.  Body: `{"path":"/absolute/path/to/file.flac"}`.  Missing or empty `path` returns `400`.  HQPlayer errors return `502`. |
 | `POST` | `/lms/album`  | **Not yet implemented** — returns `501 Not Implemented`. Will be enabled once the HQPlayer Embedded XML API exposes a native album/playlist-load command. |
 

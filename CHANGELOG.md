@@ -2,6 +2,25 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.1.0] - 2026-07-28
+
+### Changed
+- Track loading now uses a single `<PlayNextUri uri="..."/>` command instead of the previous two-command `<Load/>` + `<Play/>` sequence.  When HQPlayer is stopped the track starts immediately; when already playing it is queued for a gapless transition.
+- Next/prev navigation is now handled entirely by the LMS Perl layer: `Player.pm::next()` and `Player.pm::prev()` call `playlist index +1/-1` on the LMS queue, which then triggers a new `load()` → `POST /lms/track` → `<PlayNextUri/>` cycle.  No HQPlayer XML skip commands are used.
+
+### Added
+- `IHQPlayerClient::playNextUri()` / `HQPlayerClient::playNextUri()` — sends `<PlayNextUri uri="..."/>` for gapless-capable track loading
+- `Player.pm::next()` / `Player.pm::prev()` — LMS-layer skip handlers that advance the LMS queue and let `load()` handle the rest
+- Unit tests: `testPlayNextUriCommandSendsCorrectXml`, `testPlayNextUriEmptyPathThrows`
+
+### Removed
+- `IHQPlayerClient::next()` / `HQPlayerClient::next()` — `<Next/>` XML command (superseded by LMS-queue navigation)
+- `IHQPlayerClient::prev()` / `HQPlayerClient::prev()` — `<Prev/>` XML command (superseded by LMS-queue navigation)
+- `LmsCommand::NextTrack` and `LmsCommand::PrevTrack`
+- `POST /lms/next` and `POST /lms/prev` HTTP endpoints (now return 404)
+
+---
+
 ## [1.0.0] - 2026-07-28
 
 ### Added
