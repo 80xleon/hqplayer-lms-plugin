@@ -27,6 +27,7 @@ struct NullHQPlayerClient final : hqplayer::hqplayer::IHQPlayerClient {
     void stop()  override {}
     void next()  override {}
     void prev()  override {}
+    void playNextUri(const std::string&) override {}
     void loadTrack(const std::string&) override {}
     hqplayer::hqplayer::HQPlayerStatus getStatus() override { return {}; }
 };
@@ -104,23 +105,15 @@ void testEndpoints() {
     assertTrue(status.body().find("\"state\":\"stopped\"") != std::string::npos,
                "status after stop should be stopped");
 
-    // --- next ---
+    // --- next / prev are handled by Player.pm (LMS queue advance) ---
+    // The daemon no longer exposes these endpoints; requests return 404.
     auto next = sendRequest(port, http::verb::post, "/lms/next");
-    assertTrue(next.result() == http::status::ok, "POST /lms/next should succeed");
-    assertTrue(next.body() == "{\"ok\":true}", "next response should return ok:true");
+    assertTrue(next.result() == http::status::not_found,
+               "POST /lms/next should return 404 — next/prev are handled by LMS directly");
 
-    status = sendRequest(port, http::verb::get, "/lms/status");
-    assertTrue(status.body().find("\"state\":\"playing\"") != std::string::npos,
-               "status after next should be playing (optimistic)");
-
-    // --- prev ---
     auto prev = sendRequest(port, http::verb::post, "/lms/prev");
-    assertTrue(prev.result() == http::status::ok, "POST /lms/prev should succeed");
-    assertTrue(prev.body() == "{\"ok\":true}", "prev response should return ok:true");
-
-    status = sendRequest(port, http::verb::get, "/lms/status");
-    assertTrue(status.body().find("\"state\":\"playing\"") != std::string::npos,
-               "status after prev should be playing (optimistic)");
+    assertTrue(prev.result() == http::status::not_found,
+               "POST /lms/prev should return 404 — next/prev are handled by LMS directly");
 
     auto missing = sendRequest(port, http::verb::get, "/lms/missing");
     assertTrue(missing.result() == http::status::not_found, "unknown endpoint should return 404");

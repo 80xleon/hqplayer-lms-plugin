@@ -178,6 +178,33 @@ void testStopCommandSendsCorrectXml() {
                "stop() should send <Stop/> XML command");
 }
 
+void testPlayNextUriCommandSendsCorrectXml() {
+    const std::string response =
+        R"(<?xml version="1.0" encoding="UTF-8"?><PlayNextUri result="OK"/>)";
+
+    MockHQPlayerServer server(response);
+    hqplayer::hqplayer::HQPlayerClient client(makeConfig(server.port()));
+
+    client.playNextUri("/music/Artist/Album/01.flac");
+
+    const auto& cmd = server.lastReceivedCommand();
+    assertTrue(cmd.find("<PlayNextUri uri=\"/music/Artist/Album/01.flac\"/>") != std::string::npos,
+               "playNextUri() should send <PlayNextUri uri=\"...\"/> XML command");
+}
+
+void testPlayNextUriEmptyPathThrows() {
+    hqplayer::hqplayer::HQPlayerClient client(makeConfig(19999));
+    bool thrown = false;
+    try {
+        client.playNextUri("");
+    } catch (const hqplayer::hqplayer::HQPlayerError& e) {
+        thrown = true;
+        const std::string msg = e.what();
+        assertTrue(!msg.empty(), "HQPlayerError from empty uri should have message");
+    }
+    assertTrue(thrown, "playNextUri('') should throw HQPlayerError");
+}
+
 void testNextCommandSendsCorrectXml() {
     const std::string response =
         R"(<?xml version="1.0" encoding="UTF-8"?><Next result="OK"/>)";
@@ -326,6 +353,8 @@ int main() {
         testGetStatusWithMetadata();
         testPlayCommandSendsCorrectXml();
         testStopCommandSendsCorrectXml();
+        testPlayNextUriCommandSendsCorrectXml();
+        testPlayNextUriEmptyPathThrows();
         testNextCommandSendsCorrectXml();
         testPrevCommandSendsCorrectXml();
         testLoadTrackCommandSendsCorrectXml();

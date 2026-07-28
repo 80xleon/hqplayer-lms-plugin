@@ -9,9 +9,7 @@ enum class LmsCommand {
     Play,
     Pause,
     Stop,
-    Status,
-    NextTrack,
-    PrevTrack
+    Status
 };
 
 struct LmsStatus {

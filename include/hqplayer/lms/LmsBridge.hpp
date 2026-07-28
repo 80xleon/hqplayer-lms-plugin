@@ -25,7 +25,9 @@ public:
 
     /// Handle a command from the LMS HTTP adapter.
     ///
-    /// Play/Pause/Stop/NextTrack/PrevTrack are forwarded to the HQPlayer client.
+    /// Play/Pause/Stop are forwarded to the HQPlayer client.
+    /// Next/prev navigation is handled at the LMS layer (Player.pm advances
+    /// the LMS queue, which triggers a load() call with the new track URI).
     /// Errors are logged but not propagated so the HTTP contract is always stable.
     void handleCommand(LmsCommand command) override;
 

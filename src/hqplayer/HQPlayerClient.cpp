@@ -253,6 +253,26 @@ void HQPlayerClient::prev() {
     verifyResult(response, "Prev");
 }
 
+void HQPlayerClient::playNextUri(const std::string& uri) {
+    if (uri.empty()) {
+        throw HQPlayerError("playNextUri: uri must not be empty");
+    }
+
+    Logger::instance().log(LogLevel::Info, "Queuing next URI in HQPlayer: " + uri);
+
+    // HQPlayer Embedded XML/TCP API: queue the next file via
+    // <PlayNextUri uri="<path>"/>.  This mirrors the --play-next-uri CLI
+    // option:
+    //  - When stopped:  starts playback of <uri> immediately.
+    //  - When playing:  queues <uri> for gapless transition after current
+    //                   track ends.
+    //
+    // Expected response: <PlayNextUri result="OK"/>
+    const std::string cmd = "<PlayNextUri uri=\"" + uri + "\"/>";
+    const auto response = sendAndReceive(cmd);
+    verifyResult(response, "PlayNextUri");
+}
+
 void HQPlayerClient::loadTrack(const std::string& filePath) {
     if (filePath.empty()) {
         throw HQPlayerError("loadTrack: filePath must not be empty");

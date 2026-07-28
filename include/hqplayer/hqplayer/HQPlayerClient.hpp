@@ -42,9 +42,17 @@ public:
     /// @throws HQPlayerError on network or protocol error.
     void prev() override;
 
+    /// Queue @p uri as the next file to play (HQPe --play-next-uri semantics).
+    ///
+    /// Sends <PlayNextUri uri="<uri>"/> to HQPlayer Embedded.
+    /// See IHQPlayerClient::playNextUri for full semantics.
+    /// @throws HQPlayerError on network or protocol error.
+    void playNextUri(const std::string& uri) override;
+
     /// Load a single audio file and begin playback via HQPlayer.
     ///
     /// Sends <Load src="<filePath>"/> then <Play/> to HQPlayer Embedded.
+    /// Superseded by playNextUri() for LMS-driven playback.
     /// @throws HQPlayerError on network or protocol error.
     void loadTrack(const std::string& filePath) override;
 

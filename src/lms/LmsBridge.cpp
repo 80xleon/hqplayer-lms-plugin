@@ -60,28 +60,6 @@ void LmsBridge::handleCommand(LmsCommand command) {
         }
         break;
 
-    case LmsCommand::NextTrack:
-        Logger::instance().log(LogLevel::Info, "LmsBridge: NextTrack");
-        try {
-            client_.next();
-            setOptimisticState("playing");
-        } catch (const std::exception& e) {
-            Logger::instance().log(LogLevel::Warn,
-                "LmsBridge: NextTrack failed — " + std::string(e.what()));
-        }
-        break;
-
-    case LmsCommand::PrevTrack:
-        Logger::instance().log(LogLevel::Info, "LmsBridge: PrevTrack");
-        try {
-            client_.prev();
-            setOptimisticState("playing");
-        } catch (const std::exception& e) {
-            Logger::instance().log(LogLevel::Warn,
-                "LmsBridge: PrevTrack failed — " + std::string(e.what()));
-        }
-        break;
-
     case LmsCommand::Status:
         // Status is maintained by HQPlayerSync; nothing to do here.
         break;
@@ -138,7 +116,7 @@ void LmsBridge::handleTrackLoad(const std::string& filePath) {
     }
 
     Logger::instance().log(LogLevel::Info,
-        "LmsBridge: LoadTrack '" + filePath + "'");
+        "LmsBridge: PlayNextUri '" + filePath + "'");
 
     // Reset the track-ended flag: a new track is starting so any previous
     // "track ended" signal is no longer relevant.
@@ -148,11 +126,14 @@ void LmsBridge::handleTrackLoad(const std::string& filePath) {
     }
 
     try {
-        client_.loadTrack(filePath);
+        // Use playNextUri (HQPe --play-next-uri semantics):
+        //  - stopped  → starts playing filePath immediately.
+        //  - playing  → queues filePath for gapless transition after current track.
+        client_.playNextUri(filePath);
         setOptimisticState("playing");
     } catch (const std::exception& e) {
         Logger::instance().log(LogLevel::Warn,
-            "LmsBridge: LoadTrack failed — " + std::string(e.what()));
+            "LmsBridge: PlayNextUri failed — " + std::string(e.what()));
         throw;
     }
 }

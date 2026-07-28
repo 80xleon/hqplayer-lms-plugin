@@ -249,12 +249,6 @@ void LmsHttpAdapter::run() {
             } else if (request.method() == http::verb::post && request.target() == "/lms/stop") {
                 bridge_.handleCommand(LmsCommand::Stop);
                 response = makeJsonResponse(http::status::ok, "{\"ok\":true}");
-            } else if (request.method() == http::verb::post && request.target() == "/lms/next") {
-                bridge_.handleCommand(LmsCommand::NextTrack);
-                response = makeJsonResponse(http::status::ok, "{\"ok\":true}");
-            } else if (request.method() == http::verb::post && request.target() == "/lms/prev") {
-                bridge_.handleCommand(LmsCommand::PrevTrack);
-                response = makeJsonResponse(http::status::ok, "{\"ok\":true}");
             } else if (request.method() == http::verb::post && request.target() == "/lms/track") {
                 const auto path = extractJsonStringField(request.body(), "path");
                 if (!path.has_value() || path->empty()) {

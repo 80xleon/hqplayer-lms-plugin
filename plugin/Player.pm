@@ -94,14 +94,38 @@ sub resume {
 }
 
 # ---------------------------------------------------------------------------
+# Queue navigation
+#
+# LMS calls next() / prev() when the user (or LMS internally) requests a
+# skip.  Instead of forwarding raw next/prev commands to HQPlayer Embedded,
+# we advance the LMS queue directly.  LMS then calls load() on this player
+# with the new track URL, which posts it to /lms/track so HQPlayer receives
+# a PlayNextUri command.
+# ---------------------------------------------------------------------------
+
+sub next {
+    my ( $self, $params ) = @_;
+    $self->execute( [ 'playlist', 'index', '+1' ] );
+    return 1;
+}
+
+sub prev {
+    my ( $self, $params ) = @_;
+    $self->execute( [ 'playlist', 'index', '-1' ] );
+    return 1;
+}
+
+# ---------------------------------------------------------------------------
 # Track loading
 #
 # LMS calls load() when it wants the player to start playing a new track.
 # $track is either a Slim::Schema::Track object or a URL string.
 #
 # We extract the absolute filesystem path from the file:// URL and POST it
-# to the daemon's /lms/track endpoint, which forwards the Load command to
-# HQPlayer Embedded.
+# to the daemon's /lms/track endpoint.  The daemon forwards the URI to
+# HQPlayer Embedded via <PlayNextUri uri="..."/> (--play-next-uri semantics):
+#   - stopped → starts playing immediately
+#   - playing → queues for gapless transition after the current track ends
 # ---------------------------------------------------------------------------
 
 sub load {
