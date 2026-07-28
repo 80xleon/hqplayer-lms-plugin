@@ -10,6 +10,8 @@ find_package(Threads REQUIRED)
 
 add_library(hqplayer_core
     src/config/Config.cpp
+    src/hqplayer/HQPlayerClient.cpp
+    src/hqplayer/HQPlayerSync.cpp
     src/lms/LmsBridge.cpp
     src/lms/LmsHttpAdapter.cpp
     src/util/Logger.cpp
@@ -34,6 +36,14 @@ if(BUILD_TESTING)
     add_executable(config_tests tests/unit/ConfigTests.cpp)
     target_link_libraries(config_tests PRIVATE hqplayer_core)
     add_test(NAME config_tests COMMAND config_tests)
+
+    add_executable(hqplayer_client_tests tests/unit/HQPlayerClientTests.cpp)
+    target_link_libraries(hqplayer_client_tests PRIVATE hqplayer_core)
+    add_test(NAME hqplayer_client_tests COMMAND hqplayer_client_tests)
+
+    add_executable(hqplayer_sync_tests tests/unit/HQPlayerSyncTests.cpp)
+    target_link_libraries(hqplayer_sync_tests PRIVATE hqplayer_core)
+    add_test(NAME hqplayer_sync_tests COMMAND hqplayer_sync_tests)
 
     add_executable(lms_http_adapter_integration_tests tests/integration/LmsHttpAdapterIntegrationTests.cpp)
     target_link_libraries(lms_http_adapter_integration_tests PRIVATE hqplayer_core)

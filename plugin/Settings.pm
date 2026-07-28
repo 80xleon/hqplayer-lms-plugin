@@ -34,7 +34,7 @@ sub page { 'plugins/HQPlayer/settings/basic.html' }
 # prefs — list of preference keys managed by this settings page.
 # ---------------------------------------------------------------------------
 sub prefs {
-    return ( $prefs, qw(config_path lms_host lms_port log_level) );
+    return ( $prefs, qw(config_path lms_host lms_port log_level hqplayer_host hqplayer_port hqplayer_timeout_ms hqplayer_poll_ms) );
 }
 
 # ---------------------------------------------------------------------------
@@ -66,15 +66,24 @@ sub handler {
 
     # Populate template params with current pref values for both GET and
     # re-displayed POST (so the form reflects what the user typed).
-    $params->{'pref_config_path'} = $prefs->get('config_path');
-    $params->{'pref_lms_host'}    = $prefs->get('lms_host');
-    $params->{'pref_lms_port'}    = $prefs->get('lms_port');
-    $params->{'pref_log_level'}   = $prefs->get('log_level');
+    $params->{'pref_config_path'}         = $prefs->get('config_path');
+    $params->{'pref_lms_host'}            = $prefs->get('lms_host');
+    $params->{'pref_lms_port'}            = $prefs->get('lms_port');
+    $params->{'pref_log_level'}           = $prefs->get('log_level');
+    $params->{'pref_hqplayer_host'}       = $prefs->get('hqplayer_host');
+    $params->{'pref_hqplayer_port'}       = $prefs->get('hqplayer_port');
+    $params->{'pref_hqplayer_timeout_ms'} = $prefs->get('hqplayer_timeout_ms');
+    $params->{'pref_hqplayer_poll_ms'}    = $prefs->get('hqplayer_poll_ms');
 
-    # Probe the daemon and inject reachability into the template.
+    # Probe the LMS adapter daemon and inject reachability into the template.
     my $reachable = _probeDaemon( $prefs->get('lms_host'), $prefs->get('lms_port') );
     $params->{'daemon_reachable'} = $reachable;
     $params->{'daemon_status'}    = $reachable ? 'HQPLAYER_DAEMON_UP' : 'HQPLAYER_DAEMON_DOWN';
+
+    # Probe HQPlayer itself.
+    my $hqp_reachable = _probeDaemon( $prefs->get('hqplayer_host'), $prefs->get('hqplayer_port') );
+    $params->{'hqplayer_reachable'} = $hqp_reachable;
+    $params->{'hqplayer_status'}    = $hqp_reachable ? 'HQPLAYER_HQP_UP' : 'HQPLAYER_HQP_DOWN';
 
     return $class->SUPER::handler( $client, $params );
 }
@@ -105,6 +114,26 @@ sub _validate {
         push @errors, 'HQPLAYER_ERR_LOG_LEVEL';
     }
 
+    my $hqp_host = _trim( $params->{'pref_hqplayer_host'} // '' );
+    unless ( length $hqp_host ) {
+        push @errors, 'HQPLAYER_ERR_HQP_HOST';
+    }
+
+    my $hqp_port = $params->{'pref_hqplayer_port'} // '';
+    unless ( $hqp_port =~ /^\d+$/ && $hqp_port >= 1 && $hqp_port <= 65535 ) {
+        push @errors, 'HQPLAYER_ERR_HQP_PORT';
+    }
+
+    my $timeout = $params->{'pref_hqplayer_timeout_ms'} // '';
+    unless ( $timeout =~ /^\d+$/ && $timeout >= 1 ) {
+        push @errors, 'HQPLAYER_ERR_HQP_TIMEOUT';
+    }
+
+    my $poll = $params->{'pref_hqplayer_poll_ms'} // '';
+    unless ( $poll =~ /^\d+$/ && $poll >= 1 ) {
+        push @errors, 'HQPLAYER_ERR_HQP_POLL';
+    }
+
     return @errors;
 }
 
@@ -114,10 +143,14 @@ sub _validate {
 sub _persistPrefs {
     my ($params) = @_;
 
-    $prefs->set( 'config_path', _trim( $params->{'pref_config_path'} ) );
-    $prefs->set( 'lms_host',    _trim( $params->{'pref_lms_host'} ) );
-    $prefs->set( 'lms_port',    int( $params->{'pref_lms_port'} ) );
-    $prefs->set( 'log_level',   lc( _trim( $params->{'pref_log_level'} ) ) );
+    $prefs->set( 'config_path',          _trim( $params->{'pref_config_path'} ) );
+    $prefs->set( 'lms_host',             _trim( $params->{'pref_lms_host'} ) );
+    $prefs->set( 'lms_port',             int( $params->{'pref_lms_port'} ) );
+    $prefs->set( 'log_level',            lc( _trim( $params->{'pref_log_level'} ) ) );
+    $prefs->set( 'hqplayer_host',        _trim( $params->{'pref_hqplayer_host'} ) );
+    $prefs->set( 'hqplayer_port',        int( $params->{'pref_hqplayer_port'} ) );
+    $prefs->set( 'hqplayer_timeout_ms',  int( $params->{'pref_hqplayer_timeout_ms'} ) );
+    $prefs->set( 'hqplayer_poll_ms',     int( $params->{'pref_hqplayer_poll_ms'} ) );
 }
 
 # ---------------------------------------------------------------------------
@@ -129,9 +162,13 @@ sub _writeConfig {
 
     return 'config path is empty' unless defined $path && length $path;
 
-    my $host  = $prefs->get('lms_host');
-    my $port  = $prefs->get('lms_port');
-    my $level = $prefs->get('log_level');
+    my $host        = $prefs->get('lms_host');
+    my $port        = $prefs->get('lms_port');
+    my $level       = $prefs->get('log_level');
+    my $hqp_host    = $prefs->get('hqplayer_host');
+    my $hqp_port    = $prefs->get('hqplayer_port');
+    my $hqp_timeout = $prefs->get('hqplayer_timeout_ms');
+    my $hqp_poll    = $prefs->get('hqplayer_poll_ms');
 
     # Build the YAML content.  The Config.cpp parser is a simple line-by-line
     # reader; indentation must use two spaces and section headers must end with
@@ -143,6 +180,12 @@ logging:
 lms_adapter:
   host: $host
   port: $port
+
+hqplayer:
+  host: $hqp_host
+  port: $hqp_port
+  timeout_ms: $hqp_timeout
+  poll_interval_ms: $hqp_poll
 END_YAML
 
     open( my $fh, '>', $path )

@@ -8,13 +8,22 @@
 
 <h2>[% 'HQPLAYER_SETTINGS' | string %]</h2>
 
-<!-- Daemon reachability indicator -->
+<!-- LMS adapter daemon reachability indicator -->
 <div class="setting">
     <label>[% 'HQPLAYER_DAEMON_STATUS' | string %]</label>
     <span class="hqplayer-daemon-status [% IF params.daemon_reachable %]hqplayer-up[% ELSE %]hqplayer-down[% END %]">
         [% params.daemon_status | string %]
     </span>
     <p class="field-desc">[% 'HQPLAYER_DAEMON_STATUS_DESC' | string %]</p>
+</div>
+
+<!-- HQPlayer Embedded reachability indicator -->
+<div class="setting">
+    <label>[% 'HQPLAYER_HQP_STATUS' | string %]</label>
+    <span class="hqplayer-daemon-status [% IF params.hqplayer_reachable %]hqplayer-up[% ELSE %]hqplayer-down[% END %]">
+        [% params.hqplayer_status | string %]
+    </span>
+    <p class="field-desc">[% 'HQPLAYER_HQP_STATUS_DESC' | string %]</p>
 </div>
 
 <style>
@@ -41,6 +50,11 @@
 
 <form method="post" action="[% params.webroot %]plugins/HQPlayer/settings/basic.html">
     <input type="hidden" name="saveSettings" value="1" />
+
+    <!-- ------------------------------------------------------------------ -->
+    <!-- Section: LMS adapter daemon                                         -->
+    <!-- ------------------------------------------------------------------ -->
+    <h3>[% 'HQPLAYER_SECTION_LMS' | string %]</h3>
 
     <!-- Config file path -->
     <div class="setting">
@@ -109,6 +123,82 @@
             [% END %]
         </select>
         <p class="field-desc">[% 'HQPLAYER_LOG_LEVEL_DESC' | string %]</p>
+    </div>
+
+    <!-- ------------------------------------------------------------------ -->
+    <!-- Section: HQPlayer Embedded connection                               -->
+    <!-- ------------------------------------------------------------------ -->
+    <h3>[% 'HQPLAYER_SECTION_HQP' | string %]</h3>
+
+    <!-- HQPlayer host -->
+    <div class="setting">
+        <label for="pref_hqplayer_host">
+            [% 'HQPLAYER_HQP_HOST' | string %]
+        </label>
+        <input
+            type="text"
+            id="pref_hqplayer_host"
+            name="pref_hqplayer_host"
+            value="[% params.pref_hqplayer_host | html %]"
+            required
+            placeholder="127.0.0.1"
+            size="20"
+        />
+        <p class="field-desc">[% 'HQPLAYER_HQP_HOST_DESC' | string %]</p>
+    </div>
+
+    <!-- HQPlayer port -->
+    <div class="setting">
+        <label for="pref_hqplayer_port">
+            [% 'HQPLAYER_HQP_PORT' | string %]
+        </label>
+        <input
+            type="number"
+            id="pref_hqplayer_port"
+            name="pref_hqplayer_port"
+            value="[% params.pref_hqplayer_port | html %]"
+            required
+            min="1"
+            max="65535"
+            step="1"
+        />
+        <p class="field-desc">[% 'HQPLAYER_HQP_PORT_DESC' | string %]</p>
+    </div>
+
+    <!-- HQPlayer connection timeout -->
+    <div class="setting">
+        <label for="pref_hqplayer_timeout_ms">
+            [% 'HQPLAYER_HQP_TIMEOUT' | string %]
+        </label>
+        <input
+            type="number"
+            id="pref_hqplayer_timeout_ms"
+            name="pref_hqplayer_timeout_ms"
+            value="[% params.pref_hqplayer_timeout_ms | html %]"
+            required
+            min="100"
+            max="30000"
+            step="100"
+        />
+        <p class="field-desc">[% 'HQPLAYER_HQP_TIMEOUT_DESC' | string %]</p>
+    </div>
+
+    <!-- HQPlayer status poll interval -->
+    <div class="setting">
+        <label for="pref_hqplayer_poll_ms">
+            [% 'HQPLAYER_HQP_POLL' | string %]
+        </label>
+        <input
+            type="number"
+            id="pref_hqplayer_poll_ms"
+            name="pref_hqplayer_poll_ms"
+            value="[% params.pref_hqplayer_poll_ms | html %]"
+            required
+            min="500"
+            max="60000"
+            step="500"
+        />
+        <p class="field-desc">[% 'HQPLAYER_HQP_POLL_DESC' | string %]</p>
     </div>
 
     <div class="setting">

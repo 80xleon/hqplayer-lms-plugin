@@ -89,3 +89,75 @@ HQPLAYER_DAEMON_DOWN
 HQPLAYER_DAEMON_STATUS_DESC
 	EN	Live check: the plugin attempts a TCP connection to the configured host and port.
 	FR	Vérification en direct : le plugin tente une connexion TCP sur l'hôte et le port configurés.
+
+HQPLAYER_SECTION_LMS
+	EN	LMS Adapter Daemon
+	FR	Daemon adaptateur LMS
+
+HQPLAYER_SECTION_HQP
+	EN	HQPlayer Embedded Connection
+	FR	Connexion HQPlayer Embedded
+
+HQPLAYER_HQP_STATUS
+	EN	HQPlayer status
+	FR	État HQPlayer
+
+HQPLAYER_HQP_UP
+	EN	● Reachable — HQPlayer is running
+	FR	● Joignable — HQPlayer est actif
+
+HQPLAYER_HQP_DOWN
+	EN	○ Unreachable — HQPlayer is not running
+	FR	○ Injoignable — HQPlayer n'est pas actif
+
+HQPLAYER_HQP_STATUS_DESC
+	EN	Live check: the plugin attempts a TCP connection to the HQPlayer XML control port.
+	FR	Vérification en direct : le plugin tente une connexion TCP sur le port de contrôle XML HQPlayer.
+
+HQPLAYER_HQP_HOST
+	EN	HQPlayer host
+	FR	Hôte HQPlayer
+
+HQPLAYER_HQP_HOST_DESC
+	EN	Hostname or IP address of the machine running HQPlayer Embedded (e.g. 127.0.0.1 or hqplayer.local).
+	FR	Nom d'hôte ou adresse IP de la machine exécutant HQPlayer Embedded (ex. 127.0.0.1 ou hqplayer.local).
+
+HQPLAYER_HQP_PORT
+	EN	HQPlayer XML control port
+	FR	Port de contrôle XML HQPlayer
+
+HQPLAYER_HQP_PORT_DESC
+	EN	TCP port of the HQPlayer XML control API (default 4321).
+	FR	Port TCP de l'API de contrôle XML HQPlayer (défaut 4321).
+
+HQPLAYER_HQP_TIMEOUT
+	EN	Connection timeout (ms)
+	FR	Délai de connexion (ms)
+
+HQPLAYER_HQP_TIMEOUT_DESC
+	EN	Maximum time in milliseconds to wait for a response from HQPlayer (100–30000).
+	FR	Durée maximale en millisecondes pour attendre une réponse de HQPlayer (100–30000).
+
+HQPLAYER_HQP_POLL
+	EN	Status poll interval (ms)
+	FR	Intervalle de scrutation du statut (ms)
+
+HQPLAYER_HQP_POLL_DESC
+	EN	How often the daemon polls HQPlayer for playback status, in milliseconds (500–60000).
+	FR	Fréquence à laquelle le daemon interroge HQPlayer pour l'état de lecture, en millisecondes (500–60000).
+
+HQPLAYER_ERR_HQP_HOST
+	EN	HQPlayer host must not be empty.
+	FR	L'hôte HQPlayer ne peut pas être vide.
+
+HQPLAYER_ERR_HQP_PORT
+	EN	Invalid HQPlayer port: must be an integer between 1 and 65535.
+	FR	Port HQPlayer invalide : doit être un entier compris entre 1 et 65535.
+
+HQPLAYER_ERR_HQP_TIMEOUT
+	EN	Invalid connection timeout: must be a positive integer (milliseconds).
+	FR	Délai de connexion invalide : doit être un entier positif (millisecondes).
+
+HQPLAYER_ERR_HQP_POLL
+	EN	Invalid poll interval: must be a positive integer (milliseconds).
+	FR	Intervalle de scrutation invalide : doit être un entier positif (millisecondes).

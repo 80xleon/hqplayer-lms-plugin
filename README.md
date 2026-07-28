@@ -18,9 +18,16 @@ logging:
 lms_adapter:
   host: 127.0.0.1
   port: 18080
+
+hqplayer:
+  host: 127.0.0.1   # hostname/IP of the machine running HQPlayer Embedded
+  port: 4321         # HQPlayer XML control port (default 4321)
+  timeout_ms: 3000   # TCP send/receive timeout in milliseconds
+  poll_interval_ms: 5000  # how often the daemon polls HQPlayer for status
 ```
 
 `lms_adapter.host` is used as the actual bind address and is validated at startup.
+`hqplayer.host` is the hostname or IP of the HQPlayer Embedded instance.
 
 ## 2) Build
 
@@ -114,6 +121,10 @@ web interface.
 | Bind host | `127.0.0.1` | IP address the daemon binds to (IPv4 or IPv6). |
 | Port | `18080` | TCP port for the daemon's HTTP server (1–65535). |
 | Log level | `info` | Daemon log verbosity: `trace`, `debug`, `info`, `warn`, `error`. |
+| HQPlayer host | `127.0.0.1` | Hostname or IP of the machine running HQPlayer Embedded. |
+| HQPlayer XML control port | `4321` | TCP port of the HQPlayer XML control API (default 4321). |
+| Connection timeout (ms) | `3000` | Max time to wait for HQPlayer to respond (100–30000 ms). |
+| Status poll interval (ms) | `5000` | How often the daemon queries HQPlayer for status (500–60000 ms). |
 
 The top of the page also shows a **live status indicator** — the plugin makes a
 quick TCP probe to `host:port` every time the settings page is loaded and

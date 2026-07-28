@@ -1,3 +1,4 @@
+#include "hqplayer/hqplayer/IHQPlayerClient.hpp"
 #include "hqplayer/lms/LmsBridge.hpp"
 #include "hqplayer/lms/LmsHttpAdapter.hpp"
 
@@ -17,6 +18,15 @@ namespace {
 namespace beast = boost::beast;
 namespace http = beast::http;
 using tcp = boost::asio::ip::tcp;
+
+/// Minimal IHQPlayerClient that does nothing — used to isolate the HTTP
+/// adapter layer in integration tests.
+struct NullHQPlayerClient final : hqplayer::hqplayer::IHQPlayerClient {
+    void play()  override {}
+    void pause() override {}
+    void stop()  override {}
+    hqplayer::hqplayer::HQPlayerStatus getStatus() override { return {}; }
+};
 
 void assertTrue(bool condition, const std::string& message) {
     if (!condition) {
@@ -56,7 +66,8 @@ http::response<http::string_body> sendRequest(
 }
 
 void testEndpoints() {
-    hqplayer::lms::LmsBridge bridge;
+    NullHQPlayerClient nullClient;
+    hqplayer::lms::LmsBridge bridge(nullClient);
     hqplayer::lms::LmsHttpAdapter adapter(bridge, "127.0.0.1", 0);
     adapter.start();
 
@@ -97,7 +108,8 @@ void testEndpoints() {
 }
 
 void testInvalidHostAtStart() {
-    hqplayer::lms::LmsBridge bridge;
+    NullHQPlayerClient nullClient;
+    hqplayer::lms::LmsBridge bridge(nullClient);
     hqplayer::lms::LmsHttpAdapter adapter(bridge, "bad_host", 18083);
 
     bool thrown = false;

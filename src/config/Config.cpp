@@ -87,6 +87,53 @@ AppConfig parseConfigText(const std::string& text) {
             }
             continue;
         }
+
+        if (section == "hqplayer" && key == "host") {
+            cfg.hqplayer.host = value;
+            continue;
+        }
+
+        if (section == "hqplayer" && key == "port") {
+            try {
+                const auto parsed = std::stoul(value);
+                if (parsed == 0 || parsed > 65535) {
+                    throw std::out_of_range("range");
+                }
+                cfg.hqplayer.port = static_cast<std::uint16_t>(parsed);
+            } catch (const std::exception&) {
+                throw std::invalid_argument(
+                    "Invalid config value hqplayer.port='" + value + "': expected 1..65535");
+            }
+            continue;
+        }
+
+        if (section == "hqplayer" && key == "timeout_ms") {
+            try {
+                const auto parsed = std::stoul(value);
+                if (parsed == 0) {
+                    throw std::out_of_range("range");
+                }
+                cfg.hqplayer.timeout_ms = static_cast<std::uint32_t>(parsed);
+            } catch (const std::exception&) {
+                throw std::invalid_argument(
+                    "Invalid config value hqplayer.timeout_ms='" + value + "': expected > 0");
+            }
+            continue;
+        }
+
+        if (section == "hqplayer" && key == "poll_interval_ms") {
+            try {
+                const auto parsed = std::stoul(value);
+                if (parsed == 0) {
+                    throw std::out_of_range("range");
+                }
+                cfg.hqplayer.poll_interval_ms = static_cast<std::uint32_t>(parsed);
+            } catch (const std::exception&) {
+                throw std::invalid_argument(
+                    "Invalid config value hqplayer.poll_interval_ms='" + value + "': expected > 0");
+            }
+            continue;
+        }
     }
 
     validateHost(cfg.lms_adapter.host);

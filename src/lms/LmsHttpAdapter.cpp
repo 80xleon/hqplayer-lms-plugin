@@ -137,8 +137,8 @@ std::string LmsHttpAdapter::statusJson() const {
 
 void LmsHttpAdapter::run() {
     namespace http = beast::http;
-    using hqplayer::util::LogLevel;
-    using hqplayer::util::Logger;
+    using ::hqplayer::util::LogLevel;
+    using ::hqplayer::util::Logger;
 
     try {
         boost::system::error_code ec;

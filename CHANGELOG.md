@@ -2,6 +2,20 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.9.0] - 2026-07-28
+
+### Added
+- `HQPlayerTypes.hpp` — `HQPlayerState` enum, `HQPlayerStatus` struct, `HQPlayerError` exception
+- `IHQPlayerClient` — pure interface for controlling HQPlayer
+- `HQPlayerClient` — TCP/XML client for HQPlayer Embedded port 4321 (one connection per command, configurable timeout)
+- `HQPlayerSync` — background polling thread with configurable interval, observer callback, and exponential back-off on error
+- `HQPlayerConfig` in `AppConfig` — `host`, `port` (4321), `timeout_ms` (3000), `poll_interval_ms` (5000) with YAML parsing
+- `LmsBridge` wired to real `IHQPlayerClient`: forwards Play/Pause/Stop to HQPlayer, optimistic state updates, status maintained by HQPlayerSync
+- `LmsBridge::updateCachedStatus()` — called by HQPlayerSync observer on each successful poll
+- Unit tests: `HQPlayerClientTests` (mock TCP server), `HQPlayerSyncTests` (mock client), new `ConfigTests` covering `hqplayer:` section
+- LMS plugin GUI: new **HQPlayer Embedded Connection** section (host, port, timeout_ms, poll_interval_ms) with live TCP reachability probe
+- Plugin version bumped to 0.9.0
+
 ## [0.8.3] - 2026-07-28
 
 ### Added

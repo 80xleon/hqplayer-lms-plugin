@@ -29,10 +29,14 @@ my $prefs = preferences('plugin.hqplayer');
 # ---------------------------------------------------------------------------
 $prefs->init(
     {
-        config_path => '/etc/hqplayer/config.yaml',
-        lms_host    => '127.0.0.1',
-        lms_port    => 18080,
-        log_level   => 'info',
+        config_path          => '/etc/hqplayer/config.yaml',
+        lms_host             => '127.0.0.1',
+        lms_port             => 18080,
+        log_level            => 'info',
+        hqplayer_host        => '127.0.0.1',
+        hqplayer_port        => 4321,
+        hqplayer_timeout_ms  => 3000,
+        hqplayer_poll_ms     => 5000,
     }
 );
 
@@ -60,7 +64,7 @@ sub getDisplayName { 'HQPLAYER_NAME' }
 # ---------------------------------------------------------------------------
 # _version — helper returning the version string from install.xml.
 # ---------------------------------------------------------------------------
-sub _version { '0.8.3' }
+sub _version { '0.9.0' }
 
 # ---------------------------------------------------------------------------
 # prefs — accessor used by Settings.pm and tests.
