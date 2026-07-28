@@ -25,6 +25,8 @@ struct NullHQPlayerClient final : hqplayer::hqplayer::IHQPlayerClient {
     void play()  override {}
     void pause() override {}
     void stop()  override {}
+    void next()  override {}
+    void prev()  override {}
     hqplayer::hqplayer::HQPlayerStatus getStatus() override { return {}; }
 };
 
@@ -101,8 +103,55 @@ void testEndpoints() {
     assertTrue(status.body().find("\"state\":\"stopped\"") != std::string::npos,
                "status after stop should be stopped");
 
+    // --- next ---
+    auto next = sendRequest(port, http::verb::post, "/lms/next");
+    assertTrue(next.result() == http::status::ok, "POST /lms/next should succeed");
+    assertTrue(next.body() == "{\"ok\":true}", "next response should return ok:true");
+
+    status = sendRequest(port, http::verb::get, "/lms/status");
+    assertTrue(status.body().find("\"state\":\"playing\"") != std::string::npos,
+               "status after next should be playing (optimistic)");
+
+    // --- prev ---
+    auto prev = sendRequest(port, http::verb::post, "/lms/prev");
+    assertTrue(prev.result() == http::status::ok, "POST /lms/prev should succeed");
+    assertTrue(prev.body() == "{\"ok\":true}", "prev response should return ok:true");
+
+    status = sendRequest(port, http::verb::get, "/lms/status");
+    assertTrue(status.body().find("\"state\":\"playing\"") != std::string::npos,
+               "status after prev should be playing (optimistic)");
+
     auto missing = sendRequest(port, http::verb::get, "/lms/missing");
     assertTrue(missing.result() == http::status::not_found, "unknown endpoint should return 404");
+
+    adapter.stop();
+}
+
+void testAlbumEndpoint() {
+    NullHQPlayerClient nullClient;
+    hqplayer::lms::LmsBridge bridge(nullClient);
+    hqplayer::lms::LmsHttpAdapter adapter(bridge, "127.0.0.1", 0);
+    adapter.start();
+
+    const auto port = adapter.boundPort();
+
+    // Valid path — returns 501 because HQPlayer XML API does not support album play yet.
+    auto resp = sendRequest(port, http::verb::post, "/lms/album",
+                            R"({"path":"/music/MyAlbum"})");
+    assertTrue(resp.result() == http::status::not_implemented,
+               "POST /lms/album with valid path should return 501 (feature pending HQPlayer API)");
+    assertTrue(resp.body().find("\"error\"") != std::string::npos,
+               "501 response should include error field");
+
+    // Missing path field — 400.
+    auto missingPath = sendRequest(port, http::verb::post, "/lms/album", R"({"other":"x"})");
+    assertTrue(missingPath.result() == http::status::bad_request,
+               "POST /lms/album without path should return 400");
+
+    // Empty body — 400.
+    auto emptyBody = sendRequest(port, http::verb::post, "/lms/album", "");
+    assertTrue(emptyBody.result() == http::status::bad_request,
+               "POST /lms/album with empty body should return 400");
 
     adapter.stop();
 }
@@ -130,6 +179,7 @@ void testInvalidHostAtStart() {
 int main() {
     try {
         testEndpoints();
+        testAlbumEndpoint();
         testInvalidHostAtStart();
         return 0;
     } catch (const std::exception& e) {

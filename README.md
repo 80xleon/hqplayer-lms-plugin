@@ -87,7 +87,24 @@ curl -s http://127.0.0.1:18080/lms/status
 curl -s -X POST http://127.0.0.1:18080/lms/play
 curl -s -X POST http://127.0.0.1:18080/lms/pause
 curl -s -X POST http://127.0.0.1:18080/lms/stop
+curl -s -X POST http://127.0.0.1:18080/lms/next
+curl -s -X POST http://127.0.0.1:18080/lms/prev
+curl -s -X POST http://127.0.0.1:18080/lms/album \
+     -H 'Content-Type: application/json' \
+     -d '{"path":"/path/to/album"}'
 ```
+
+### Endpoint reference
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `GET`  | `/lms/status` | Returns current playback state as JSON. |
+| `POST` | `/lms/play`   | Start playback. |
+| `POST` | `/lms/pause`  | Pause playback. |
+| `POST` | `/lms/stop`   | Stop playback. |
+| `POST` | `/lms/next`   | Skip to next track in the current HQPlayer playlist. |
+| `POST` | `/lms/prev`   | Skip to previous track in the current HQPlayer playlist. |
+| `POST` | `/lms/album`  | **Not yet implemented** — returns `501 Not Implemented`. Body: `{"path":"/path/to/album"}`. Missing or empty `path` returns `400 Bad Request`. Will be enabled once the HQPlayer Embedded XML API exposes a native album/playlist-load command. |
 
 ## 5) LMS Plugin Installation
 

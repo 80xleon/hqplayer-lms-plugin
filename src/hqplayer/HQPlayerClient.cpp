@@ -241,6 +241,18 @@ void HQPlayerClient::stop() {
     verifyResult(response, "Stop");
 }
 
+void HQPlayerClient::next() {
+    Logger::instance().log(LogLevel::Info, "Sending Next to HQPlayer");
+    const auto response = sendAndReceive("<Next/>");
+    verifyResult(response, "Next");
+}
+
+void HQPlayerClient::prev() {
+    Logger::instance().log(LogLevel::Info, "Sending Prev to HQPlayer");
+    const auto response = sendAndReceive("<Prev/>");
+    verifyResult(response, "Prev");
+}
+
 HQPlayerStatus HQPlayerClient::getStatus() {
     const auto response = sendAndReceive("<Status/>");
     return parseStatusXml(response);

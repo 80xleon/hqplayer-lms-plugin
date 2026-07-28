@@ -25,12 +25,19 @@ public:
 
     /// Handle a command from the LMS HTTP adapter.
     ///
-    /// Play/Pause/Stop are forwarded to the HQPlayer client.  Errors are
-    /// logged but not propagated so the HTTP contract is always stable.
+    /// Play/Pause/Stop/NextTrack/PrevTrack are forwarded to the HQPlayer client.
+    /// Errors are logged but not propagated so the HTTP contract is always stable.
     void handleCommand(LmsCommand command) override;
 
     /// @return The most recently cached LMS status.
     LmsStatus currentStatus() const override;
+
+    /// Attempt to play an album by filesystem path.
+    ///
+    /// Validates @p albumPath (non-empty) then forwards to the HQPlayer client.
+    /// @throws std::invalid_argument if @p albumPath is empty.
+    /// @throws std::runtime_error   if the HQPlayer backend cannot fulfil the request.
+    void handleAlbumPlay(const std::string& albumPath) override;
 
     /// Update the cached status from an external source (e.g. HQPlayerSync).
     void updateCachedStatus(const ::hqplayer::hqplayer::HQPlayerStatus& status);

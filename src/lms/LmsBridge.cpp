@@ -2,6 +2,8 @@
 
 #include "hqplayer/util/Logger.hpp"
 
+#include <stdexcept>
+
 namespace hqplayer::lms {
 
 using ::hqplayer::util::LogLevel;
@@ -58,6 +60,28 @@ void LmsBridge::handleCommand(LmsCommand command) {
         }
         break;
 
+    case LmsCommand::NextTrack:
+        Logger::instance().log(LogLevel::Info, "LmsBridge: NextTrack");
+        try {
+            client_.next();
+            setOptimisticState("playing");
+        } catch (const std::exception& e) {
+            Logger::instance().log(LogLevel::Warn,
+                "LmsBridge: NextTrack failed — " + std::string(e.what()));
+        }
+        break;
+
+    case LmsCommand::PrevTrack:
+        Logger::instance().log(LogLevel::Info, "LmsBridge: PrevTrack");
+        try {
+            client_.prev();
+            setOptimisticState("playing");
+        } catch (const std::exception& e) {
+            Logger::instance().log(LogLevel::Warn,
+                "LmsBridge: PrevTrack failed — " + std::string(e.what()));
+        }
+        break;
+
     case LmsCommand::Status:
         // Status is maintained by HQPlayerSync; nothing to do here.
         break;
@@ -80,6 +104,22 @@ void LmsBridge::updateCachedStatus(const ::hqplayer::hqplayer::HQPlayerStatus& s
 void LmsBridge::setOptimisticState(const std::string& state) {
     std::lock_guard<std::mutex> lock(mutex_);
     cached_.state = state;
+}
+
+void LmsBridge::handleAlbumPlay(const std::string& albumPath) {
+    if (albumPath.empty()) {
+        throw std::invalid_argument("Album path must not be empty");
+    }
+
+    Logger::instance().log(LogLevel::Info,
+        "LmsBridge: PlayAlbum '" + albumPath + "'");
+
+    // TODO: HQPlayer Embedded XML API does not expose a native album-play command.
+    // When the HQPlayer playlist API is confirmed and documented, replace this
+    // with a direct client_.playAlbum(albumPath) call.
+    throw std::runtime_error(
+        "Album playback is not yet supported: HQPlayer Embedded does not expose "
+        "a native album-play XML command. Load a playlist via HQPlayer's own interface.");
 }
 
 } // namespace hqplayer::lms

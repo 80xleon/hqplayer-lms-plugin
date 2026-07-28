@@ -178,6 +178,34 @@ void testStopCommandSendsCorrectXml() {
                "stop() should send <Stop/> XML command");
 }
 
+void testNextCommandSendsCorrectXml() {
+    const std::string response =
+        R"(<?xml version="1.0" encoding="UTF-8"?><Next result="OK"/>)";
+
+    MockHQPlayerServer server(response);
+    hqplayer::hqplayer::HQPlayerClient client(makeConfig(server.port()));
+
+    client.next();
+
+    const auto& cmd = server.lastReceivedCommand();
+    assertTrue(cmd.find("<Next/>") != std::string::npos,
+               "next() should send <Next/> XML command");
+}
+
+void testPrevCommandSendsCorrectXml() {
+    const std::string response =
+        R"(<?xml version="1.0" encoding="UTF-8"?><Prev result="OK"/>)";
+
+    MockHQPlayerServer server(response);
+    hqplayer::hqplayer::HQPlayerClient client(makeConfig(server.port()));
+
+    client.prev();
+
+    const auto& cmd = server.lastReceivedCommand();
+    assertTrue(cmd.find("<Prev/>") != std::string::npos,
+               "prev() should send <Prev/> XML command");
+}
+
 void testConnectFailureThrows() {
     hqplayer::hqplayer::HQPlayerClient client(makeConfig(19999)); // nothing listening
     bool thrown = false;
@@ -200,6 +228,8 @@ int main() {
         testGetStatusWithMetadata();
         testPlayCommandSendsCorrectXml();
         testStopCommandSendsCorrectXml();
+        testNextCommandSendsCorrectXml();
+        testPrevCommandSendsCorrectXml();
         testConnectFailureThrows();
         return 0;
     } catch (const std::exception& e) {

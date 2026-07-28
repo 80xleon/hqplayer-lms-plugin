@@ -2,6 +2,19 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.0.0] - 2026-07-28
+
+### Added
+- `IHQPlayerClient::next()` / `HQPlayerClient::next()` — sends `<Next/>` to HQPlayer Embedded to skip to the next playlist track
+- `IHQPlayerClient::prev()` / `HQPlayerClient::prev()` — sends `<Prev/>` to HQPlayer Embedded to skip to the previous playlist track
+- `LmsCommand::NextTrack` and `LmsCommand::PrevTrack` — handled by `LmsBridge` with optimistic state `"playing"`
+- `POST /lms/next` and `POST /lms/prev` HTTP endpoints
+- `ILmsBridge::handleAlbumPlay(path)` / `LmsBridge::handleAlbumPlay(path)` — validates path and documents the TODO for native HQPlayer album/playlist-load support
+- `POST /lms/album` HTTP endpoint — returns `400` for missing/empty path, `501 Not Implemented` until HQPlayer XML API exposes a native album-play command
+- Unit tests: `testNextCommandSendsCorrectXml`, `testPrevCommandSendsCorrectXml` in `HQPlayerClientTests`
+- Integration tests: next/prev state transitions and full `/lms/album` contract (valid path → 501, missing path → 400, empty body → 400)
+- README endpoint reference table
+
 ## [0.9.0] - 2026-07-28
 
 ### Added

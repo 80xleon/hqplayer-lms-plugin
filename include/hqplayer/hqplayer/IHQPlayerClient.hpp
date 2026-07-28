@@ -24,6 +24,14 @@ public:
     /// @throws HQPlayerError on network or protocol error.
     virtual void stop() = 0;
 
+    /// Skip to the next track in the current HQPlayer playlist.
+    /// @throws HQPlayerError on network or protocol error.
+    virtual void next() = 0;
+
+    /// Skip to the previous track in the current HQPlayer playlist.
+    /// @throws HQPlayerError on network or protocol error.
+    virtual void prev() = 0;
+
     /// Query the current HQPlayer status.
     /// @return Current HQPlayerStatus.
     /// @throws HQPlayerError on network or protocol error.

@@ -34,6 +34,14 @@ public:
     /// @throws HQPlayerError on network or protocol error.
     void stop() override;
 
+    /// Skip to the next track in the current HQPlayer playlist.
+    /// @throws HQPlayerError on network or protocol error.
+    void next() override;
+
+    /// Skip to the previous track in the current HQPlayer playlist.
+    /// @throws HQPlayerError on network or protocol error.
+    void prev() override;
+
     /// Query the current HQPlayer status.
     /// @return Parsed HQPlayerStatus.
     /// @throws HQPlayerError on network or protocol error.

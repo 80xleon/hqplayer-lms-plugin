@@ -7,6 +7,7 @@
 #include <boost/beast/core.hpp>
 #include <boost/beast/http.hpp>
 
+#include <optional>
 #include <stdexcept>
 #include <string>
 
@@ -40,6 +41,31 @@ http::response<http::string_body> makeJsonResponse(http::status status, std::str
     response.body() = std::move(body);
     response.prepare_payload();
     return response;
+}
+
+/// Extract the value of a JSON string field named @p key from @p body.
+/// Handles the common pattern {"key":"value"} without a full JSON library.
+/// Returns std::nullopt when the field is absent or malformed.
+std::optional<std::string> extractJsonStringField(const std::string& body,
+                                                   const std::string& key) {
+    const std::string needle = "\"" + key + "\"";
+    const auto keyPos = body.find(needle);
+    if (keyPos == std::string::npos) {
+        return std::nullopt;
+    }
+    const auto colonPos = body.find(':', keyPos + needle.size());
+    if (colonPos == std::string::npos) {
+        return std::nullopt;
+    }
+    const auto q1 = body.find('"', colonPos + 1);
+    if (q1 == std::string::npos) {
+        return std::nullopt;
+    }
+    const auto q2 = body.find('"', q1 + 1);
+    if (q2 == std::string::npos) {
+        return std::nullopt;
+    }
+    return body.substr(q1 + 1, q2 - q1 - 1);
 }
 
 } // namespace
@@ -221,6 +247,32 @@ void LmsHttpAdapter::run() {
             } else if (request.method() == http::verb::post && request.target() == "/lms/stop") {
                 bridge_.handleCommand(LmsCommand::Stop);
                 response = makeJsonResponse(http::status::ok, "{\"ok\":true}");
+            } else if (request.method() == http::verb::post && request.target() == "/lms/next") {
+                bridge_.handleCommand(LmsCommand::NextTrack);
+                response = makeJsonResponse(http::status::ok, "{\"ok\":true}");
+            } else if (request.method() == http::verb::post && request.target() == "/lms/prev") {
+                bridge_.handleCommand(LmsCommand::PrevTrack);
+                response = makeJsonResponse(http::status::ok, "{\"ok\":true}");
+            } else if (request.method() == http::verb::post && request.target() == "/lms/album") {
+                const auto path = extractJsonStringField(request.body(), "path");
+                if (!path.has_value() || path->empty()) {
+                    response = makeJsonResponse(
+                        http::status::bad_request,
+                        "{\"error\":\"missing or empty \\\"path\\\" field\"}");
+                } else {
+                    try {
+                        bridge_.handleAlbumPlay(*path);
+                        response = makeJsonResponse(http::status::ok, "{\"ok\":true}");
+                    } catch (const std::invalid_argument& e) {
+                        response = makeJsonResponse(
+                            http::status::bad_request,
+                            "{\"error\":\"" + escapeJson(e.what()) + "\"}");
+                    } catch (const std::exception& e) {
+                        response = makeJsonResponse(
+                            http::status::not_implemented,
+                            "{\"error\":\"" + escapeJson(e.what()) + "\"}");
+                    }
+                }
             } else {
                 response = makeJsonResponse(http::status::not_found, "{\"error\":\"not found\"}");
             }
