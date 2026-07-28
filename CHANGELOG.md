@@ -2,8 +2,15 @@
 
 All notable changes to this project will be documented in this file.
 
-## [1.1.0] - 2026-07-28
+## [1.1.1] - 2026-07-28
 
+### Changed
+- `Plugins::HQPlayer::Player::load()` now forwards non-`file://` track URLs to `/lms/track` instead of rejecting them, allowing LMS-proxied streaming URIs (for example Qobuz via LMS) to be passed through to HQPlayer via `<PlayNextUri uri="..."/>`.
+- README updated to document dual source modes for `/lms/track`: local filesystem paths and stream URIs.
+
+---
+
+## [1.1.0] - 2026-07-28
 ### Changed
 - Track loading now uses a single `<PlayNextUri uri="..."/>` command instead of the previous two-command `<Load/>` + `<Play/>` sequence.  When HQPlayer is stopped the track starts immediately; when already playing it is queued for a gapless transition.
 - Next/prev navigation is now handled entirely by the LMS Perl layer: `Player.pm::next()` and `Player.pm::prev()` call `playlist index +1/-1` on the LMS queue, which then triggers a new `load()` → `POST /lms/track` → `<PlayNextUri/>` cycle.  No HQPlayer XML skip commands are used.

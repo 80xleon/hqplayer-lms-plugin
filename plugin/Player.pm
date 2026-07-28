@@ -9,9 +9,9 @@ package Plugins::HQPlayer::Player;
 # Prerequisites:
 #   - hqplayer_lms_daemon must be running (configured via the plugin settings
 #     page under Settings → HQPlayer).
-#   - The music library path must be accessible at the same absolute path on
-#     both the LMS host and the HQPlayer Embedded host (e.g. a shared NAS
-#     mount).
+#   - For local file playback, the music library path must be accessible at
+#     the same absolute path on both the LMS host and the HQPlayer Embedded
+#     host (e.g. a shared NAS mount).
 
 use strict;
 use warnings;
@@ -121,9 +121,14 @@ sub prev {
 # LMS calls load() when it wants the player to start playing a new track.
 # $track is either a Slim::Schema::Track object or a URL string.
 #
-# We extract the absolute filesystem path from the file:// URL and POST it
-# to the daemon's /lms/track endpoint.  The daemon forwards the URI to
-# HQPlayer Embedded via <PlayNextUri uri="..."/> (--play-next-uri semantics):
+# For file:// URLs, we extract the absolute filesystem path and POST it to
+# the daemon's /lms/track endpoint.
+#
+# For non-file URLs (for example LMS-proxied streaming URLs), we forward the
+# URL as-is to /lms/track so HQPlayer can open that URI directly.
+#
+# The daemon forwards the value to HQPlayer Embedded via
+# <PlayNextUri uri="..."/> (--play-next-uri semantics):
 #   - stopped → starts playing immediately
 #   - playing → queues for gapless transition after the current track ends
 # ---------------------------------------------------------------------------
@@ -148,7 +153,8 @@ sub load {
         }
     }
     elsif ( defined $url ) {
-        $log->warn('HQPlayer load(): non-file URL not supported: ' . $url);
+        my $body = '{"path":"' . _escapeJson($url) . '"}';
+        $self->_daemonPost( '/lms/track', $body );
     }
 
     return 1;

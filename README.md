@@ -22,16 +22,19 @@ HQPlayer Embedded
 **Playback flow (per track)**
 
 1. User selects the **HQPlayer** virtual player in Material skin and taps Play on an album.
-2. LMS queues all tracks and calls `load()` on the virtual player with the first track's local path.
+2. LMS queues all tracks and calls `load()` on the virtual player with the first track source (local file or stream URL).
 3. The Perl player sends `POST /lms/track {"path":"..."}` to the local daemon.
 4. The daemon sends `<PlayNextUri uri="..."/>` to HQPlayer Embedded via XML/TCP.  When stopped, playback starts immediately; when already playing, the track is queued for a gapless transition.
 5. The daemon's status poller detects the `Playing → Stopped` transition when the track ends and sets `track_ended: true` in `GET /lms/status`.
 6. The plugin's Perl polling timer reads `track_ended: true` and calls `playlist index +1` on the LMS queue.
 7. LMS calls `load()` again with the next track — repeat from step 3.
 
-**Prerequisite**: The music library path must be accessible at the same absolute
-path on both the LMS host and the HQPlayer Embedded host (e.g. a shared NAS
-mount such as `/music` on both machines).
+**Source prerequisites**:
+- **Local library files (`file://...`)**: the music library path must be
+  accessible at the same absolute path on both the LMS host and the HQPlayer
+  Embedded host (e.g. a shared NAS mount such as `/music` on both machines).
+- **Streaming sources** (for example LMS-proxied URLs): LMS can pass a stream
+  URI to HQPlayer via `/lms/track`; HQPlayer then opens that URI directly.
 
 ---
 
@@ -187,6 +190,5 @@ curl -s -X POST http://127.0.0.1:18080/lms/track \
 | `POST` | `/lms/play`   | Start or resume playback. |
 | `POST` | `/lms/pause`  | Pause playback. |
 | `POST` | `/lms/stop`   | Stop playback. |
-| `POST` | `/lms/track`  | Load a file via `<PlayNextUri/>`.  When HQPlayer is stopped, playback starts immediately; when already playing, the track is queued for a gapless transition.  Body: `{"path":"/absolute/path/to/file.flac"}`.  Missing or empty `path` returns `400`.  HQPlayer errors return `502`. |
+| `POST` | `/lms/track`  | Load a source via `<PlayNextUri/>` (local file path or stream URI).  When HQPlayer is stopped, playback starts immediately; when already playing, the track is queued for a gapless transition.  Body: `{"path":"/absolute/path/to/file.flac"}` or `{"path":"http://lms-host:9000/..."}`.  Missing or empty `path` returns `400`.  HQPlayer errors return `502`. |
 | `POST` | `/lms/album`  | **Not yet implemented** — returns `501 Not Implemented`. Will be enabled once the HQPlayer Embedded XML API exposes a native album/playlist-load command. |
-
