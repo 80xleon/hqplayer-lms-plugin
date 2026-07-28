@@ -8,6 +8,21 @@
 
 <h2>[% 'HQPLAYER_SETTINGS' | string %]</h2>
 
+<!-- Daemon reachability indicator -->
+<div class="setting">
+    <label>[% 'HQPLAYER_DAEMON_STATUS' | string %]</label>
+    <span class="hqplayer-daemon-status [% IF params.daemon_reachable %]hqplayer-up[% ELSE %]hqplayer-down[% END %]">
+        [% params.daemon_status | string %]
+    </span>
+    <p class="field-desc">[% 'HQPLAYER_DAEMON_STATUS_DESC' | string %]</p>
+</div>
+
+<style>
+.hqplayer-daemon-status { font-weight: bold; }
+.hqplayer-up   { color: #2a7a2a; }
+.hqplayer-down { color: #b22222; }
+</style>
+
 [% IF params.saved %]
 <div class="status-message success" role="alert">
     [% 'HQPLAYER_SAVED' | string %]

@@ -73,3 +73,19 @@ HQPLAYER_ERR_CONFIG_PATH
 HQPLAYER_ERR_WRITE
 	EN	Failed to write config.yaml:
 	FR	Impossible d'écrire config.yaml :
+
+HQPLAYER_DAEMON_STATUS
+	EN	Daemon status
+	FR	État du daemon
+
+HQPLAYER_DAEMON_UP
+	EN	● Reachable — daemon is running
+	FR	● Joignable — le daemon est actif
+
+HQPLAYER_DAEMON_DOWN
+	EN	○ Unreachable — daemon is not running
+	FR	○ Injoignable — le daemon n'est pas actif
+
+HQPLAYER_DAEMON_STATUS_DESC
+	EN	Live check: the plugin attempts a TCP connection to the configured host and port.
+	FR	Vérification en direct : le plugin tente une connexion TCP sur l'hôte et le port configurés.

@@ -37,6 +37,42 @@ cmake --build build
 
 Press `ENTER` to stop.
 
+## 3b) Run as a systemd service (recommended for production)
+
+Copy the binary and service file:
+
+```bash
+sudo cp build/hqplayer_lms_daemon /usr/local/bin/
+sudo mkdir -p /etc/hqplayer
+sudo cp plugin/hqplayer_lms_daemon.service /etc/systemd/system/
+sudo systemctl daemon-reload
+sudo systemctl enable --now hqplayer_lms_daemon
+```
+
+Check status:
+
+```bash
+sudo systemctl status hqplayer_lms_daemon
+journalctl -u hqplayer_lms_daemon -f
+```
+
+After changing the configuration via the LMS plugin GUI, reload the service:
+
+```bash
+sudo systemctl restart hqplayer_lms_daemon
+```
+
+The service runs as the `squeezeboxserver` user by default. To use a different
+user, override it:
+
+```bash
+sudo systemctl edit hqplayer_lms_daemon
+# Add:
+# [Service]
+# User=youruser
+# Group=yourgroup
+```
+
 ## 4) Curl smoke tests
 
 ```bash
@@ -79,8 +115,13 @@ web interface.
 | Port | `18080` | TCP port for the daemon's HTTP server (1–65535). |
 | Log level | `info` | Daemon log verbosity: `trace`, `debug`, `info`, `warn`, `error`. |
 
+The top of the page also shows a **live status indicator** — the plugin makes a
+quick TCP probe to `host:port` every time the settings page is loaded and
+displays either **● Reachable** (daemon is up) or **○ Unreachable** (daemon is
+not running or the configured address is wrong).
+
 Click **Save** to write `config.yaml` and then start (or restart) the daemon:
 
 ```bash
-./build/hqplayer_lms_daemon /etc/hqplayer/config.yaml
+sudo systemctl restart hqplayer_lms_daemon
 ```

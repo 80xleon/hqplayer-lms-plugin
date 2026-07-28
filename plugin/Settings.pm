@@ -13,6 +13,7 @@ use warnings;
 
 use base qw(Slim::Web::Settings);
 
+use IO::Socket::INET;
 use Slim::Utils::Log;
 use Slim::Utils::Prefs;
 
@@ -69,6 +70,11 @@ sub handler {
     $params->{'pref_lms_host'}    = $prefs->get('lms_host');
     $params->{'pref_lms_port'}    = $prefs->get('lms_port');
     $params->{'pref_log_level'}   = $prefs->get('log_level');
+
+    # Probe the daemon and inject reachability into the template.
+    my $reachable = _probeDaemon( $prefs->get('lms_host'), $prefs->get('lms_port') );
+    $params->{'daemon_reachable'} = $reachable;
+    $params->{'daemon_status'}    = $reachable ? 'HQPLAYER_DAEMON_UP' : 'HQPLAYER_DAEMON_DOWN';
 
     return $class->SUPER::handler( $client, $params );
 }
@@ -152,6 +158,32 @@ END_YAML
     close($fh) or return "close failed: $!";
 
     return undef;    ## no critic (ProhibitExplicitReturnUndef)
+}
+
+# ---------------------------------------------------------------------------
+# _probeDaemon — attempt a non-blocking TCP connection to host:port.
+# Returns 1 if the daemon is reachable, 0 otherwise.
+# Uses a 2-second timeout so the settings page never hangs.
+# ---------------------------------------------------------------------------
+sub _probeDaemon {
+    my ( $host, $port ) = @_;
+
+    return 0 unless defined $host && length $host;
+    return 0 unless defined $port && $port > 0;
+
+    my $sock = IO::Socket::INET->new(
+        PeerAddr => $host,
+        PeerPort => $port,
+        Proto    => 'tcp',
+        Timeout  => 2,
+    );
+
+    if ($sock) {
+        $sock->close();
+        return 1;
+    }
+
+    return 0;
 }
 
 # ---------------------------------------------------------------------------
