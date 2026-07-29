@@ -1,5 +1,6 @@
 #include "hqplayer/lms/LmsHttpAdapter.hpp"
 
+#include "hqplayer/hqplayer/HQPlayerTypes.hpp"
 #include "hqplayer/util/Logger.hpp"
 
 #include <boost/asio/ip/address.hpp>
@@ -256,8 +257,17 @@ void LmsHttpAdapter::run() {
                         http::status::bad_request,
                         "{\"error\":\"missing or empty \\\"path\\\" field\"}");
                 } else {
+                    // Extract optional display metadata — all fields are optional.
+                    ::hqplayer::hqplayer::TrackMetadata meta;
+                    const auto title  = extractJsonStringField(request.body(), "title");
+                    const auto artist = extractJsonStringField(request.body(), "artist");
+                    const auto album  = extractJsonStringField(request.body(), "album");
+                    if (title.has_value())  meta.title  = *title;
+                    if (artist.has_value()) meta.artist = *artist;
+                    if (album.has_value())  meta.album  = *album;
+
                     try {
-                        bridge_.handleTrackLoad(*path);
+                        bridge_.handleTrackLoad(*path, meta);
                         response = makeJsonResponse(http::status::ok, "{\"ok\":true}");
                     } catch (const std::invalid_argument& e) {
                         response = makeJsonResponse(

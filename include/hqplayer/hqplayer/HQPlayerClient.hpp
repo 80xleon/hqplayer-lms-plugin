@@ -44,10 +44,12 @@ public:
 
     /// Queue @p uri as the next file to play (HQPe --play-next-uri semantics).
     ///
-    /// Sends <PlayNextUri uri="<uri>"/> to HQPlayer Embedded.
+    /// Sends <PlayNextUri uri="<uri>"/> to HQPlayer Embedded, optionally
+    /// including song/artist/album metadata attributes from @p meta.
     /// See IHQPlayerClient::playNextUri for full semantics.
     /// @throws HQPlayerError on network or protocol error.
-    void playNextUri(const std::string& uri) override;
+    void playNextUri(const std::string& uri,
+                     const TrackMetadata& meta = {}) override;
 
     /// Load a single audio file and begin playback via HQPlayer.
     ///

@@ -36,6 +36,8 @@ public:
     ///
     /// Sends the HQPlayer XML API command:
     ///   <PlayNextUri uri="<uri>"/>
+    /// or, when @p meta is non-empty:
+    ///   <PlayNextUri uri="<uri>" song="<title>" artist="<artist>" album="<album>"/>
     ///
     /// Behaviour mirrors HQPlayer Embedded's --play-next-uri option:
     ///  - When HQPlayer is stopped:  starts playing @p uri immediately.
@@ -49,7 +51,8 @@ public:
     ///       HQPlayer Embedded process (e.g. a shared NAS mount that appears
     ///       at the same path on both the LMS host and the HQPlayer host).
     /// @throws HQPlayerError on network or protocol error.
-    virtual void playNextUri(const std::string& uri) = 0;
+    virtual void playNextUri(const std::string& uri,
+                             const TrackMetadata& meta = {}) = 0;
 
     /// Load a single audio file and begin playback immediately.
     ///

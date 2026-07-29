@@ -23,7 +23,7 @@ HQPlayer Embedded
 
 1. User selects the **HQPlayer** virtual player in Material skin and taps Play on an album.
 2. LMS queues all tracks and calls `load()` on the virtual player with the first track source (local file or stream URL).
-3. The Perl player sends `POST /lms/track {"path":"..."}` to the local daemon.
+3. The Perl player sends `POST /lms/track {"path":"...", "title":"...", "artist":"...", "album":"..."}` to the local daemon.
 4. The daemon sends `<PlayNextUri uri="..."/>` to HQPlayer Embedded via XML/TCP.  When already playing, it first sends `<Stop/>` so the newly selected track starts immediately instead of queueing.
 5. The daemon's status poller detects the `Playing → Stopped` transition when the track ends and sets `track_ended: true` in `GET /lms/status`.
 6. The plugin's Perl polling timer reads `track_ended: true` and calls `playlist index +1` on the LMS queue.
@@ -179,7 +179,7 @@ curl -s -X POST http://127.0.0.1:18080/lms/pause
 curl -s -X POST http://127.0.0.1:18080/lms/stop
 curl -s -X POST http://127.0.0.1:18080/lms/track \
      -H 'Content-Type: application/json' \
-     -d '{"path":"/music/Artist/Album/01.flac"}'
+     -d '{"path":"/music/Artist/Album/01.flac","title":"My Song","artist":"My Artist","album":"My Album"}'
 ```
 
 ### Endpoint reference
@@ -190,5 +190,5 @@ curl -s -X POST http://127.0.0.1:18080/lms/track \
 | `POST` | `/lms/play`   | Start or resume playback. |
 | `POST` | `/lms/pause`  | Pause playback. |
 | `POST` | `/lms/stop`   | Stop playback. |
-| `POST` | `/lms/track`  | Load a source via `<PlayNextUri/>` (local file path or stream URI).  If HQPlayer is already playing, the daemon sends `<Stop/>` first so the new selection starts immediately.  Body: `{"path":"/absolute/path/to/file.flac"}` or `{"path":"http://lms-host:9000/..."}`.  Missing or empty `path` returns `400`.  HQPlayer errors return `502`. |
+| `POST` | `/lms/track`  | Load a source via `<PlayNextUri/>` (local file path or stream URI).  If HQPlayer is already playing, the daemon sends `<Stop/>` first so the new selection starts immediately.  Body: `{"path":"...", "title":"...", "artist":"...", "album":"..."}` — `path` is required; `title`, `artist`, and `album` are optional and forwarded to HQPlayer as Now Playing metadata.  Missing or empty `path` returns `400`.  HQPlayer errors return `502`. |
 | `POST` | `/lms/album`  | **Not yet implemented** — returns `501 Not Implemented`. Will be enabled once the HQPlayer Embedded XML API exposes a native album/playlist-load command. |

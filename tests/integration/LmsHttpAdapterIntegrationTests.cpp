@@ -28,7 +28,11 @@ struct NullHQPlayerClient final : hqplayer::hqplayer::IHQPlayerClient {
     void stop()  override { ++stopCalls; }
     void next()  override { ++nextCalls; }
     void prev()  override { ++prevCalls; }
-    void playNextUri(const std::string&) override { ++playNextUriCalls; }
+    void playNextUri(const std::string&,
+                     const hqplayer::hqplayer::TrackMetadata& meta = {}) override {
+        ++playNextUriCalls;
+        lastMetadata = meta;
+    }
     void loadTrack(const std::string&) override { ++loadTrackCalls; }
     hqplayer::hqplayer::HQPlayerStatus getStatus() override {
         hqplayer::hqplayer::HQPlayerStatus status;
@@ -46,6 +50,7 @@ struct NullHQPlayerClient final : hqplayer::hqplayer::IHQPlayerClient {
     std::atomic<int> loadTrackCalls{0};
     std::atomic<int> reportedState{
         static_cast<int>(hqplayer::hqplayer::HQPlayerState::Stopped)};
+    hqplayer::hqplayer::TrackMetadata lastMetadata{};
 };
 
 void assertTrue(bool condition, const std::string& message) {
@@ -234,6 +239,34 @@ void testTrackEndpoint() {
     adapter.stop();
 }
 
+void testTrackMetadataPassthrough() {
+    NullHQPlayerClient nullClient;
+    hqplayer::lms::LmsBridge bridge(nullClient);
+    hqplayer::lms::LmsHttpAdapter adapter(bridge, "127.0.0.1", 0);
+    adapter.start();
+
+    const auto port = adapter.boundPort();
+
+    // POST with full metadata — all fields should reach playNextUri.
+    auto resp = sendRequest(port, http::verb::post, "/lms/track",
+                            R"({"path":"/music/01.flac","title":"My Song","artist":"My Artist","album":"My Album"})");
+    assertTrue(resp.result() == http::status::ok,
+               "POST /lms/track with metadata should return 200");
+    assertTrue(nullClient.lastMetadata.title  == "My Song",   "title should be forwarded");
+    assertTrue(nullClient.lastMetadata.artist == "My Artist", "artist should be forwarded");
+    assertTrue(nullClient.lastMetadata.album  == "My Album",  "album should be forwarded");
+
+    // POST with path only — metadata fields should be empty.
+    resp = sendRequest(port, http::verb::post, "/lms/track",
+                       R"({"path":"/music/02.flac"})");
+    assertTrue(resp.result() == http::status::ok,
+               "POST /lms/track without metadata should return 200");
+    assertTrue(nullClient.lastMetadata.empty(),
+               "metadata should be empty when not supplied");
+
+    adapter.stop();
+}
+
 void testTrackEndedFlag() {
     NullHQPlayerClient nullClient;
     hqplayer::lms::LmsBridge bridge(nullClient);
@@ -276,6 +309,7 @@ int main() {
         testEndpoints();
         testAlbumEndpoint();
         testTrackEndpoint();
+        testTrackMetadataPassthrough();
         testTrackEndedFlag();
         testInvalidHostAtStart();
         return 0;

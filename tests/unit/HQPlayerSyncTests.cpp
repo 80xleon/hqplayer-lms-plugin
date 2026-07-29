@@ -35,7 +35,8 @@ struct MockHQPlayerClient final : hqplayer::hqplayer::IHQPlayerClient {
     void stop()  override { ++stopCalls; }
     void next()  override { ++nextCalls; }
     void prev()  override { ++prevCalls; }
-    void playNextUri(const std::string&) override { ++playNextUriCalls; }
+    void playNextUri(const std::string&,
+                     const hqplayer::hqplayer::TrackMetadata& = {}) override { ++playNextUriCalls; }
     void loadTrack(const std::string&) override { ++loadTrackCalls; }
 
     hqplayer::hqplayer::HQPlayerStatus getStatus() override {

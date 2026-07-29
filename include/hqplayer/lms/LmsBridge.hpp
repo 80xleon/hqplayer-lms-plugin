@@ -34,11 +34,15 @@ public:
     /// @return The most recently cached LMS status.
     LmsStatus currentStatus() const override;
 
-    /// Load a single track by filesystem path and start playback.
+    /// Load a single track by filesystem path (or URL) and start playback.
+    ///
+    /// @p meta carries optional display metadata (title, artist, album) that
+    /// is forwarded to HQPlayer Embedded via PlayNextUri attributes.
     ///
     /// @throws std::invalid_argument if @p filePath is empty.
     /// @throws std::runtime_error   if the HQPlayer backend cannot fulfil the request.
-    void handleTrackLoad(const std::string& filePath) override;
+    void handleTrackLoad(const std::string& filePath,
+                         const ::hqplayer::hqplayer::TrackMetadata& meta = {}) override;
 
     /// Attempt to play an album by filesystem path.
     ///

@@ -189,7 +189,51 @@ void testPlayNextUriCommandSendsCorrectXml() {
 
     const auto& cmd = server.lastReceivedCommand();
     assertTrue(cmd.find("<PlayNextUri uri=\"/music/Artist/Album/01.flac\"/>") != std::string::npos,
-               "playNextUri() should send <PlayNextUri uri=\"...\"/> XML command");
+               "playNextUri() without metadata should send <PlayNextUri uri=\"...\"/> XML command");
+}
+
+void testPlayNextUriWithMetadata() {
+    const std::string response =
+        R"(<?xml version="1.0" encoding="UTF-8"?><PlayNextUri result="OK"/>)";
+
+    MockHQPlayerServer server(response);
+    hqplayer::hqplayer::HQPlayerClient client(makeConfig(server.port()));
+
+    hqplayer::hqplayer::TrackMetadata meta;
+    meta.title  = "My Song";
+    meta.artist = "My Artist";
+    meta.album  = "My Album";
+    client.playNextUri("/music/01.flac", meta);
+
+    const auto& cmd = server.lastReceivedCommand();
+    assertTrue(cmd.find("song=\"My Song\"")     != std::string::npos,
+               "playNextUri with metadata should include song attribute");
+    assertTrue(cmd.find("artist=\"My Artist\"") != std::string::npos,
+               "playNextUri with metadata should include artist attribute");
+    assertTrue(cmd.find("album=\"My Album\"")   != std::string::npos,
+               "playNextUri with metadata should include album attribute");
+}
+
+void testPlayNextUriMetadataXmlEscaping() {
+    const std::string response =
+        R"(<?xml version="1.0" encoding="UTF-8"?><PlayNextUri result="OK"/>)";
+
+    MockHQPlayerServer server(response);
+    hqplayer::hqplayer::HQPlayerClient client(makeConfig(server.port()));
+
+    hqplayer::hqplayer::TrackMetadata meta;
+    meta.title  = "Track & Title";
+    meta.artist = "Simon & Garfunkel";
+    meta.album  = "Album <Special>";
+    client.playNextUri("/music/01.flac", meta);
+
+    const auto& cmd = server.lastReceivedCommand();
+    assertTrue(cmd.find("song=\"Track &amp; Title\"")       != std::string::npos,
+               "& in title should be escaped to &amp;");
+    assertTrue(cmd.find("artist=\"Simon &amp; Garfunkel\"") != std::string::npos,
+               "& in artist should be escaped to &amp;");
+    assertTrue(cmd.find("album=\"Album &lt;Special&gt;\"")  != std::string::npos,
+               "< and > in album should be escaped to &lt; / &gt;");
 }
 
 void testPlayNextUriEmptyPathThrows() {
@@ -354,6 +398,8 @@ int main() {
         testPlayCommandSendsCorrectXml();
         testStopCommandSendsCorrectXml();
         testPlayNextUriCommandSendsCorrectXml();
+        testPlayNextUriWithMetadata();
+        testPlayNextUriMetadataXmlEscaping();
         testPlayNextUriEmptyPathThrows();
         testNextCommandSendsCorrectXml();
         testPrevCommandSendsCorrectXml();

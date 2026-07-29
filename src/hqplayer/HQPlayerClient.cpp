@@ -25,6 +25,23 @@ using ::hqplayer::util::Logger;
 
 constexpr const char* kXmlDecl = R"(<?xml version="1.0" encoding="UTF-8"?>)";
 
+/// Escape a string for use as a double-quoted XML attribute value.
+/// Replaces &, <, >, and " with the corresponding XML entities.
+std::string xmlAttrEscape(const std::string& s) {
+    std::string out;
+    out.reserve(s.size());
+    for (const char c : s) {
+        switch (c) {
+        case '&':  out += "&amp;";  break;
+        case '<':  out += "&lt;";   break;
+        case '>':  out += "&gt;";   break;
+        case '"':  out += "&quot;"; break;
+        default:   out += c;        break;
+        }
+    }
+    return out;
+}
+
 /// Read from @p socket until EOF, timeout, or error.
 /// Returns accumulated bytes as a string.
 std::string readAll(boost::asio::ip::tcp::socket& socket) {
@@ -253,7 +270,7 @@ void HQPlayerClient::prev() {
     verifyResult(response, "Prev");
 }
 
-void HQPlayerClient::playNextUri(const std::string& uri) {
+void HQPlayerClient::playNextUri(const std::string& uri, const TrackMetadata& meta) {
     if (uri.empty()) {
         throw HQPlayerError("playNextUri: uri must not be empty");
     }
@@ -267,8 +284,16 @@ void HQPlayerClient::playNextUri(const std::string& uri) {
     //  - When playing:  queues <uri> for gapless transition after current
     //                   track ends.
     //
+    // Optional metadata attributes (song, artist, album) let HQPlayer display
+    // the Now Playing information without re-reading the file tags.
+    //
     // Expected response: <PlayNextUri result="OK"/>
-    const std::string cmd = "<PlayNextUri uri=\"" + uri + "\"/>";
+    std::string cmd = "<PlayNextUri uri=\"" + uri + "\"";
+    if (!meta.title.empty())  cmd += " song=\""   + xmlAttrEscape(meta.title)  + "\"";
+    if (!meta.artist.empty()) cmd += " artist=\"" + xmlAttrEscape(meta.artist) + "\"";
+    if (!meta.album.empty())  cmd += " album=\""  + xmlAttrEscape(meta.album)  + "\"";
+    cmd += "/>";
+
     const auto response = sendAndReceive(cmd);
     verifyResult(response, "PlayNextUri");
 }

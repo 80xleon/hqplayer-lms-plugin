@@ -127,8 +127,12 @@ sub prev {
 # For non-file URLs (for example LMS-proxied streaming URLs), we forward the
 # URL as-is to /lms/track so HQPlayer can open that URI directly.
 #
+# When $track is a Slim::Schema::Track object, we also extract title, artist,
+# and album and include them in the POST body so the daemon can forward them
+# to HQPlayer Embedded as Now Playing metadata.
+#
 # The daemon forwards the value to HQPlayer Embedded via
-# <PlayNextUri uri="..."/> (--play-next-uri semantics):
+# <PlayNextUri uri="..." song="..." artist="..." album="..."/>:
 #   - stopped → starts playing immediately
 #   - playing → daemon first issues Stop, then starts the newly selected track
 # ---------------------------------------------------------------------------
@@ -138,6 +142,16 @@ sub load {
 
     my $url = blessed($track) ? $track->url : ( ref $track eq '' ? $track : undef );
 
+    # Extract optional track metadata when a rich track object is available.
+    my ( $title, $artist, $album ) = ( '', '', '' );
+    if ( blessed($track) ) {
+        $title  = $track->title      // '';
+        $artist = $track->artistName // '';
+        if ( $track->can('album') && $track->album ) {
+            $album = $track->album->name // '';
+        }
+    }
+
     if ( defined $url && $url =~ m{^file://(.+)$}i ) {
         my $path = uri_unescape($1);
 
@@ -145,7 +159,7 @@ sub load {
         $path =~ s{^//[^/]*}{}i;
 
         if ( length $path ) {
-            my $body = '{"path":"' . _escapeJson($path) . '"}';
+            my $body = _buildTrackJson( $path, $title, $artist, $album );
             $self->_daemonPost( '/lms/track', $body );
         }
         else {
@@ -153,7 +167,7 @@ sub load {
         }
     }
     elsif ( defined $url ) {
-        my $body = '{"path":"' . _escapeJson($url) . '"}';
+        my $body = _buildTrackJson( $url, $title, $artist, $album );
         $self->_daemonPost( '/lms/track', $body );
     }
 
@@ -163,6 +177,18 @@ sub load {
 # ---------------------------------------------------------------------------
 # Private helpers
 # ---------------------------------------------------------------------------
+
+# Build the JSON body for a /lms/track POST request.
+# $path is required; $title, $artist, $album are optional (empty string = omit).
+sub _buildTrackJson {
+    my ( $path, $title, $artist, $album ) = @_;
+    my $json = '{"path":"' . _escapeJson($path) . '"';
+    $json .= ',"title":"'  . _escapeJson($title)  . '"' if length $title;
+    $json .= ',"artist":"' . _escapeJson($artist) . '"' if length $artist;
+    $json .= ',"album":"'  . _escapeJson($album)  . '"' if length $album;
+    $json .= '}';
+    return $json;
+}
 
 sub _daemonPost {
     my ( $self, $endpoint, $body ) = @_;

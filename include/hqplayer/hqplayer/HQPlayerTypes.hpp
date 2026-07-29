@@ -16,6 +16,22 @@ enum class HQPlayerState : int {
     Paused  = 2,
 };
 
+/// Optional track metadata sent to HQPlayer alongside a PlayNextUri command.
+///
+/// The fields map to HQPlayer Embedded XML attributes: @c title → @c song,
+/// @c artist → @c artist, @c album → @c album.  Any empty field is omitted
+/// from the XML so that HQPlayer can fall back to its own tag reading.
+struct TrackMetadata {
+    std::string title{};
+    std::string artist{};
+    std::string album{};
+
+    /// True when all fields are empty (no metadata to send).
+    bool empty() const noexcept {
+        return title.empty() && artist.empty() && album.empty();
+    }
+};
+
 /// Full playback status returned by HQPlayer.
 struct HQPlayerStatus {
     HQPlayerState state{HQPlayerState::Stopped};

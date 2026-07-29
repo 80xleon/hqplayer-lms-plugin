@@ -110,7 +110,8 @@ void LmsBridge::handleAlbumPlay(const std::string& albumPath) {
         "a native album-play XML command. Load a playlist via HQPlayer's own interface.");
 }
 
-void LmsBridge::handleTrackLoad(const std::string& filePath) {
+void LmsBridge::handleTrackLoad(const std::string& filePath,
+                                const ::hqplayer::hqplayer::TrackMetadata& meta) {
     if (filePath.empty()) {
         throw std::invalid_argument("Track path must not be empty");
     }
@@ -146,7 +147,9 @@ void LmsBridge::handleTrackLoad(const std::string& filePath) {
         }
 
         // Use playNextUri to start playback for stopped state.
-        client_.playNextUri(filePath);
+        // Metadata (title, artist, album) is forwarded so HQPlayer can display
+        // Now Playing information.
+        client_.playNextUri(filePath, meta);
         setOptimisticState("playing");
     } catch (const std::exception& e) {
         Logger::instance().log(LogLevel::Warn,
