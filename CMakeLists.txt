@@ -5,7 +5,11 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
-find_package(Boost REQUIRED COMPONENTS system)
+if(POLICY CMP0167)
+    cmake_policy(SET CMP0167 NEW)
+endif()
+
+find_package(Boost REQUIRED)
 find_package(Threads REQUIRED)
 
 add_library(hqplayer_core
@@ -24,9 +28,16 @@ target_include_directories(hqplayer_core
 
 target_link_libraries(hqplayer_core
     PUBLIC
-        Boost::system
         Threads::Threads
 )
+
+if(TARGET Boost::headers)
+    target_link_libraries(hqplayer_core PUBLIC Boost::headers)
+else()
+    target_include_directories(hqplayer_core PUBLIC ${Boost_INCLUDE_DIRS})
+endif()
+
+target_compile_definitions(hqplayer_core PUBLIC BOOST_ERROR_CODE_HEADER_ONLY)
 
 add_executable(hqplayer_lms_daemon src/main.cpp)
 target_link_libraries(hqplayer_lms_daemon PRIVATE hqplayer_core)

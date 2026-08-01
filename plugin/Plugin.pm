@@ -147,9 +147,9 @@ sub _pollDaemon {
             my ($http_obj) = @_;
 
             # Minimal JSON decode — avoid hard dependency on a JSON module.
-            my $body  = $http_obj->content // '';
-            my $state = _extractState($body);
-            if ( $body =~ /"track_ended"\s*:\s*true/ ) {
+            my $body = $http_obj->content // '';
+            my ( $state, $track_ended ) = _extractStatusFields($body);
+            if ($track_ended) {
                 _advanceQueue($client);
             }
 
@@ -211,12 +211,25 @@ sub _nextPollIntervalMs {
     return $fast_ms < 500 ? 500 : $fast_ms;
 }
 
-# Extract "state" from /lms/status JSON.
-sub _extractState {
+# Extract state + track_ended from /lms/status JSON in one scan.
+sub _extractStatusFields {
     my ($body) = @_;
-    return undef unless defined $body;
-    return $1 if $body =~ /"state"\s*:\s*"(playing|paused|stopped)"/;
-    return undef;
+    return ( undef, 0 ) unless defined $body;
+
+    my $state;
+    my $track_ended = 0;
+    while ( $body =~ /"(state|track_ended)"\s*:\s*("(?:playing|paused|stopped)"|true|false)/g ) {
+        my ( $key, $value ) = ( $1, $2 );
+        if ( $key eq 'state' ) {
+            $value =~ s/^"|"$//g;
+            $state = $value;
+        }
+        elsif ( $key eq 'track_ended' ) {
+            $track_ended = ( $value eq 'true' ) ? 1 : 0;
+        }
+    }
+
+    return ( $state, $track_ended );
 }
 
 # ---------------------------------------------------------------------------
