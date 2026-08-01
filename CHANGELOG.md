@@ -2,6 +2,30 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.2.0] - 2026-08-01
+
+### Added
+- Album cover art metadata (`coverart`) forwarded alongside title/artist/album through the full
+  pipeline: `Player.pm` → `/lms/track` JSON → `LmsHttpAdapter` → `LmsBridge` → `HQPlayerClient`
+  → `<PlayNextUri coverart="..."/>`.
+  - For **local file** tracks: the plugin searches the same directory as the audio file for
+    `cover.jpg`, `cover.png`, `folder.jpg`, or `folder.png` and sends the first match found.
+  - For **streaming** tracks (e.g. Qobuz via LMS): the LMS built-in artwork endpoint
+    (`http://<server>:<port>/music/<trackid>/cover.jpg`) is used so HQPlayer can display
+    album art even for cloud sources.
+- `TrackMetadata::coverart` field in `HQPlayerTypes.hpp`.
+- Unit tests: `testPlayNextUriWithCoverArt`, `testPlayNextUriCoverArtOnly`.
+- Integration test: `testTrackMetadataPassthrough` extended to verify `coverart` passthrough.
+
+### Fixed
+- **Qobuz authentication**: streaming proxy URLs that LMS constructs with `localhost` or
+  `127.0.0.1` as the origin are now rewritten to the actual LMS server IP address
+  (`Slim::Utils::Network::serverAddr()`) before being forwarded to HQPlayer Embedded.
+  This ensures that HQPlayer — running on a separate host — can reach the LMS HTTP proxy
+  and benefit from the Qobuz authentication performed by the Qobuz LMS plugin.
+
+---
+
 ## [1.1.1] - 2026-07-28
 
 ### Changed

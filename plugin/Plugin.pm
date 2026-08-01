@@ -76,7 +76,7 @@ sub getDisplayName { 'HQPLAYER_NAME' }
 # ---------------------------------------------------------------------------
 # _version — helper returning the version string from install.xml.
 # ---------------------------------------------------------------------------
-sub _version { '1.0.0' }
+sub _version { '1.2.0' }
 
 # ---------------------------------------------------------------------------
 # prefs — accessor used by Settings.pm and tests.

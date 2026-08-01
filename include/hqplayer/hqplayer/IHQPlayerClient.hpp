@@ -37,7 +37,8 @@ public:
     /// Sends the HQPlayer XML API command:
     ///   <PlayNextUri uri="<uri>"/>
     /// or, when @p meta is non-empty:
-    ///   <PlayNextUri uri="<uri>" song="<title>" artist="<artist>" album="<album>"/>
+    ///   <PlayNextUri uri="<uri>" song="<title>" artist="<artist>" album="<album>"
+    ///                coverart="<coverart>"/>
     ///
     /// Behaviour mirrors HQPlayer Embedded's --play-next-uri option:
     ///  - When HQPlayer is stopped:  starts playing @p uri immediately.

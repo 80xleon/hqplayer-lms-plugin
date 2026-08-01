@@ -247,16 +247,18 @@ void testTrackMetadataPassthrough() {
 
     const auto port = adapter.boundPort();
 
-    // POST with full metadata — all fields should reach playNextUri.
+    // POST with full metadata (including coverart) — all fields should reach playNextUri.
     auto resp = sendRequest(port, http::verb::post, "/lms/track",
-                            R"({"path":"/music/01.flac","title":"My Song","artist":"My Artist","album":"My Album"})");
+                            R"({"path":"/music/01.flac","title":"My Song","artist":"My Artist","album":"My Album","coverart":"/music/Artist/Album/cover.jpg"})");
     assertTrue(resp.result() == http::status::ok,
                "POST /lms/track with metadata should return 200");
-    assertTrue(nullClient.lastMetadata.title  == "My Song",   "title should be forwarded");
-    assertTrue(nullClient.lastMetadata.artist == "My Artist", "artist should be forwarded");
-    assertTrue(nullClient.lastMetadata.album  == "My Album",  "album should be forwarded");
+    assertTrue(nullClient.lastMetadata.title    == "My Song",   "title should be forwarded");
+    assertTrue(nullClient.lastMetadata.artist   == "My Artist", "artist should be forwarded");
+    assertTrue(nullClient.lastMetadata.album    == "My Album",  "album should be forwarded");
+    assertTrue(nullClient.lastMetadata.coverart == "/music/Artist/Album/cover.jpg",
+               "coverart should be forwarded");
 
-    // POST with path only — metadata fields should be empty.
+    // POST with path only — metadata fields should be empty (including coverart).
     resp = sendRequest(port, http::verb::post, "/lms/track",
                        R"({"path":"/music/02.flac"})");
     assertTrue(resp.result() == http::status::ok,

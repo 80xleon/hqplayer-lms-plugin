@@ -236,6 +236,45 @@ void testPlayNextUriMetadataXmlEscaping() {
                "< and > in album should be escaped to &lt; / &gt;");
 }
 
+void testPlayNextUriWithCoverArt() {
+    const std::string response =
+        R"(<?xml version="1.0" encoding="UTF-8"?><PlayNextUri result="OK"/>)";
+
+    MockHQPlayerServer server(response);
+    hqplayer::hqplayer::HQPlayerClient client(makeConfig(server.port()));
+
+    hqplayer::hqplayer::TrackMetadata meta;
+    meta.title   = "My Song";
+    meta.artist  = "My Artist";
+    meta.album   = "My Album";
+    meta.coverart = "/music/Artist/Album/cover.jpg";
+    client.playNextUri("/music/Artist/Album/01.flac", meta);
+
+    const auto& cmd = server.lastReceivedCommand();
+    assertTrue(cmd.find("song=\"My Song\"")   != std::string::npos,
+               "playNextUri with coverart should still include song attribute");
+    assertTrue(cmd.find("coverart=\"/music/Artist/Album/cover.jpg\"") != std::string::npos,
+               "playNextUri with coverart should include coverart attribute");
+}
+
+void testPlayNextUriCoverArtOnly() {
+    const std::string response =
+        R"(<?xml version="1.0" encoding="UTF-8"?><PlayNextUri result="OK"/>)";
+
+    MockHQPlayerServer server(response);
+    hqplayer::hqplayer::HQPlayerClient client(makeConfig(server.port()));
+
+    hqplayer::hqplayer::TrackMetadata meta;
+    meta.coverart = "/music/Artist/Album/cover.png";
+    client.playNextUri("/music/Artist/Album/01.flac", meta);
+
+    const auto& cmd = server.lastReceivedCommand();
+    assertTrue(cmd.find("coverart=\"/music/Artist/Album/cover.png\"") != std::string::npos,
+               "playNextUri with coverart only should include coverart attribute");
+    assertTrue(cmd.find("song=") == std::string::npos,
+               "song attribute should be absent when title is empty");
+}
+
 void testPlayNextUriEmptyPathThrows() {
     hqplayer::hqplayer::HQPlayerClient client(makeConfig(19999));
     bool thrown = false;
@@ -400,6 +439,8 @@ int main() {
         testPlayNextUriCommandSendsCorrectXml();
         testPlayNextUriWithMetadata();
         testPlayNextUriMetadataXmlEscaping();
+        testPlayNextUriWithCoverArt();
+        testPlayNextUriCoverArtOnly();
         testPlayNextUriEmptyPathThrows();
         testNextCommandSendsCorrectXml();
         testPrevCommandSendsCorrectXml();

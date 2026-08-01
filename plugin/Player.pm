@@ -23,6 +23,7 @@ use URI::Escape   qw(uri_unescape);
 
 use Slim::Networking::SimpleAsyncHTTP;
 use Slim::Utils::Log;
+use Slim::Utils::Network;
 use Slim::Utils::Prefs;
 
 my $log   = Slim::Utils::Log->addLogCategory({ 'category' => 'plugin.hqplayer' });
@@ -125,14 +126,18 @@ sub prev {
 # the daemon's /lms/track endpoint.
 #
 # For non-file URLs (for example LMS-proxied streaming URLs), we forward the
-# URL as-is to /lms/track so HQPlayer can open that URI directly.
+# URL as-is to /lms/track so HQPlayer can open that URI directly.  Any
+# localhost / 127.0.0.1 origin in the URL is rewritten to the actual LMS
+# server address so that HQPlayer Embedded (running on a different host) can
+# reach the LMS proxy and benefit from the authentication performed by the
+# Qobuz plugin.
 #
 # When $track is a Slim::Schema::Track object, we also extract title, artist,
-# and album and include them in the POST body so the daemon can forward them
-# to HQPlayer Embedded as Now Playing metadata.
+# album and cover art and include them in the POST body so the daemon can
+# forward them to HQPlayer Embedded as Now Playing metadata.
 #
 # The daemon forwards the value to HQPlayer Embedded via
-# <PlayNextUri uri="..." song="..." artist="..." album="..."/>:
+# <PlayNextUri uri="..." song="..." artist="..." album="..." coverart="..."/>:
 #   - stopped → starts playing immediately
 #   - playing → daemon first issues Stop, then starts the newly selected track
 # ---------------------------------------------------------------------------
@@ -143,7 +148,7 @@ sub load {
     my $url = blessed($track) ? $track->url : ( ref $track eq '' ? $track : undef );
 
     # Extract optional track metadata when a rich track object is available.
-    my ( $title, $artist, $album ) = ( '', '', '' );
+    my ( $title, $artist, $album, $coverart ) = ( '', '', '', '' );
     if ( blessed($track) ) {
         $title  = $track->title      // '';
         $artist = $track->artistName // '';
@@ -159,7 +164,10 @@ sub load {
         $path =~ s{^//[^/]*}{}i;
 
         if ( length $path ) {
-            my $body = _buildTrackJson( $path, $title, $artist, $album );
+            # Look for a cover art image file alongside the audio file.
+            $coverart = _findLocalCoverArt($path);
+
+            my $body = _buildTrackJson( $path, $title, $artist, $album, $coverart );
             $self->_daemonPost( '/lms/track', $body );
         }
         else {
@@ -167,7 +175,26 @@ sub load {
         }
     }
     elsif ( defined $url ) {
-        my $body = _buildTrackJson( $url, $title, $artist, $album );
+        # For streaming URLs (e.g. Qobuz proxied via LMS), rewrite any
+        # localhost / 127.0.0.1 origin to the real LMS server address so
+        # HQPlayer Embedded on a different host can reach the proxy and
+        # benefit from the Qobuz authentication that LMS performed.
+        if ( $url =~ m{^(https?://)(?:localhost|127\.0\.0\.1)(:\d+)?(/.*)}i ) {
+            my ( $scheme, $port_part, $path_part ) = ( $1, $2 // '', $3 );
+            my $server_addr = Slim::Utils::Network::serverAddr();
+            $url = $scheme . $server_addr . $port_part . $path_part;
+        }
+
+        # For streaming tracks served through LMS, provide the LMS artwork
+        # URL as the cover art so HQPlayer can display album art.
+        if ( blessed($track) && $track->can('id') ) {
+            my $server_prefs = Slim::Utils::Prefs::preferences('server');
+            my $http_port    = $server_prefs->get('httpport') // 9000;
+            my $server_addr  = Slim::Utils::Network::serverAddr();
+            $coverart = "http://$server_addr:$http_port/music/" . $track->id . "/cover.jpg";
+        }
+
+        my $body = _buildTrackJson( $url, $title, $artist, $album, $coverart );
         $self->_daemonPost( '/lms/track', $body );
     }
 
@@ -178,14 +205,28 @@ sub load {
 # Private helpers
 # ---------------------------------------------------------------------------
 
+# Look for a cover art image file (jpg or png) in the same directory as the
+# given audio file path.  Returns the first match found, or an empty string.
+sub _findLocalCoverArt {
+    my ($audio_path) = @_;
+    my ($dir) = $audio_path =~ m{^(.*)/[^/]+$};
+    return '' unless defined $dir && length $dir;
+    for my $img (qw(cover.jpg cover.png folder.jpg folder.png)) {
+        my $candidate = "$dir/$img";
+        return $candidate if -f $candidate;
+    }
+    return '';
+}
+
 # Build the JSON body for a /lms/track POST request.
-# $path is required; $title, $artist, $album are optional (empty string = omit).
+# $path is required; $title, $artist, $album, $coverart are optional (empty = omit).
 sub _buildTrackJson {
-    my ( $path, $title, $artist, $album ) = @_;
+    my ( $path, $title, $artist, $album, $coverart ) = @_;
     my $json = '{"path":"' . _escapeJson($path) . '"';
-    $json .= ',"title":"'  . _escapeJson($title)  . '"' if length $title;
-    $json .= ',"artist":"' . _escapeJson($artist) . '"' if length $artist;
-    $json .= ',"album":"'  . _escapeJson($album)  . '"' if length $album;
+    $json .= ',"title":"'   . _escapeJson($title)   . '"' if length $title;
+    $json .= ',"artist":"'  . _escapeJson($artist)  . '"' if length $artist;
+    $json .= ',"album":"'   . _escapeJson($album)   . '"' if length $album;
+    $json .= ',"coverart":"' . _escapeJson($coverart // '') . '"' if length( $coverart // '' );
     $json .= '}';
     return $json;
 }

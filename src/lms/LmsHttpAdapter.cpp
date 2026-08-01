@@ -259,12 +259,14 @@ void LmsHttpAdapter::run() {
                 } else {
                     // Extract optional display metadata — all fields are optional.
                     ::hqplayer::hqplayer::TrackMetadata meta;
-                    const auto title  = extractJsonStringField(request.body(), "title");
-                    const auto artist = extractJsonStringField(request.body(), "artist");
-                    const auto album  = extractJsonStringField(request.body(), "album");
-                    if (title.has_value())  meta.title  = *title;
-                    if (artist.has_value()) meta.artist = *artist;
-                    if (album.has_value())  meta.album  = *album;
+                    const auto title    = extractJsonStringField(request.body(), "title");
+                    const auto artist   = extractJsonStringField(request.body(), "artist");
+                    const auto album    = extractJsonStringField(request.body(), "album");
+                    const auto coverart = extractJsonStringField(request.body(), "coverart");
+                    if (title.has_value())    meta.title    = *title;
+                    if (artist.has_value())   meta.artist   = *artist;
+                    if (album.has_value())    meta.album    = *album;
+                    if (coverart.has_value()) meta.coverart = *coverart;
 
                     try {
                         bridge_.handleTrackLoad(*path, meta);

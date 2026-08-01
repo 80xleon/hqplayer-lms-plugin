@@ -6,7 +6,7 @@
 <extension>
     <details>
         <name>HQPlayer</name>
-        <version>1.0.0</version>
+        <version>1.2.0</version>
         <author>80xleon</author>
         <description>HQPLAYER_DESC</description>
         <homepageURL>https://github.com/80xleon/hqplayer-lms-plugin</homepageURL>

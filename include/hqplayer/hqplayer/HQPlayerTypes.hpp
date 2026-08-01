@@ -19,16 +19,21 @@ enum class HQPlayerState : int {
 /// Optional track metadata sent to HQPlayer alongside a PlayNextUri command.
 ///
 /// The fields map to HQPlayer Embedded XML attributes: @c title → @c song,
-/// @c artist → @c artist, @c album → @c album.  Any empty field is omitted
-/// from the XML so that HQPlayer can fall back to its own tag reading.
+/// @c artist → @c artist, @c album → @c album, @c coverart → @c coverart.
+/// Any empty field is omitted from the XML so that HQPlayer can fall back to
+/// its own tag reading.
 struct TrackMetadata {
     std::string title{};
     std::string artist{};
     std::string album{};
 
+    /// Filesystem path or HTTP URL to the cover art image (jpg or png).
+    /// Omitted from the XML command when empty.
+    std::string coverart{};
+
     /// True when all fields are empty (no metadata to send).
     bool empty() const noexcept {
-        return title.empty() && artist.empty() && album.empty();
+        return title.empty() && artist.empty() && album.empty() && coverart.empty();
     }
 };
 

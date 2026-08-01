@@ -284,14 +284,15 @@ void HQPlayerClient::playNextUri(const std::string& uri, const TrackMetadata& me
     //  - When playing:  queues <uri> for gapless transition after current
     //                   track ends.
     //
-    // Optional metadata attributes (song, artist, album) let HQPlayer display
-    // the Now Playing information without re-reading the file tags.
+    // Optional metadata attributes (song, artist, album, coverart) let HQPlayer
+    // display the Now Playing information without re-reading the file tags.
     //
     // Expected response: <PlayNextUri result="OK"/>
     std::string cmd = "<PlayNextUri uri=\"" + uri + "\"";
-    if (!meta.title.empty())  cmd += " song=\""   + xmlAttrEscape(meta.title)  + "\"";
-    if (!meta.artist.empty()) cmd += " artist=\"" + xmlAttrEscape(meta.artist) + "\"";
-    if (!meta.album.empty())  cmd += " album=\""  + xmlAttrEscape(meta.album)  + "\"";
+    if (!meta.title.empty())    cmd += " song=\""    + xmlAttrEscape(meta.title)    + "\"";
+    if (!meta.artist.empty())   cmd += " artist=\""  + xmlAttrEscape(meta.artist)   + "\"";
+    if (!meta.album.empty())    cmd += " album=\""   + xmlAttrEscape(meta.album)    + "\"";
+    if (!meta.coverart.empty()) cmd += " coverart=\"" + xmlAttrEscape(meta.coverart) + "\"";
     cmd += "/>";
 
     const auto response = sendAndReceive(cmd);
