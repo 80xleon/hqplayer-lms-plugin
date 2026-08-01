@@ -26,7 +26,7 @@ HQPlayer Embedded
 3. The Perl player sends `POST /lms/track {"path":"...", "title":"...", "artist":"...", "album":"..."}` to the local daemon.
 4. The daemon sends `<PlayNextUri uri="..."/>` to HQPlayer Embedded via XML/TCP.  When already playing, it first sends `<Stop/>` so the newly selected track starts immediately instead of queueing.
 5. The daemon's status poller detects the `Playing → Stopped` transition when the track ends and sets `track_ended: true` in `GET /lms/status`.
-6. The plugin's Perl polling timer reads `track_ended: true` and calls `playlist index +1` on the LMS queue.
+6. The plugin's Perl polling timer reads `track_ended: true` and calls `playlist index +1` on the LMS queue. While HQPlayer state is `playing`, this poll runs at half of the configured interval (minimum 500ms) to reduce transition latency.
 7. LMS calls `load()` again with the next track — repeat from step 3.
 
 **Source prerequisites**:
@@ -156,7 +156,7 @@ The `plugin/` directory is a standard Lyrion Music Server plugin.  It adds:
 | HQPlayer host | `127.0.0.1` | Hostname or IP of the machine running HQPlayer Embedded. |
 | HQPlayer XML control port | `4321` | TCP port of the HQPlayer XML control API (default 4321). |
 | Connection timeout (ms) | `3000` | Max time to wait for HQPlayer to respond (100–30000 ms). |
-| Status poll interval (ms) | `5000` | How often the daemon queries HQPlayer for status (500–60000 ms). |
+| Status poll interval (ms) | `5000` | Base interval for daemon status polling (500–60000 ms); LMS plugin poll uses this value and adapts to half interval (min 500 ms) while playing. |
 | Virtual player name | `HQPlayer` | Name shown for the player in the LMS player selector. |
 
 The top of the page also shows **live status indicators** — TCP probes to both

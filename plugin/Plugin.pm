@@ -124,15 +124,17 @@ sub _registerVirtualPlayer {
 # ---------------------------------------------------------------------------
 sub _startPolling {
     my ($client) = @_;
-
-    my $interval_s = ( $prefs->get('hqplayer_poll_ms') || 5000 ) / 1000;
-    Slim::Utils::Timers::setTimer( $client,
-        Time::HiRes::time() + $interval_s, \&_pollDaemon );
+    _scheduleNextPoll($client);
 }
 
 # ---------------------------------------------------------------------------
 # _pollDaemon — timer callback: GET /lms/status and advance the queue on
 #               track_ended == true.
+#
+# Adaptive behavior:
+#   - while state == "playing", poll faster (half of configured interval,
+#     floored at 500ms) to reduce track-end handoff latency
+#   - while paused/stopped/unknown, poll at configured interval
 # ---------------------------------------------------------------------------
 sub _pollDaemon {
     my ($client) = @_;
@@ -145,24 +147,21 @@ sub _pollDaemon {
             my ($http_obj) = @_;
 
             # Minimal JSON decode — avoid hard dependency on a JSON module.
-            my $body = $http_obj->content // '';
+            my $body  = $http_obj->content // '';
+            my $state = _extractState($body);
             if ( $body =~ /"track_ended"\s*:\s*true/ ) {
                 _advanceQueue($client);
             }
 
             # Reschedule for next poll.
-            my $interval_s = ( $prefs->get('hqplayer_poll_ms') || 5000 ) / 1000;
-            Slim::Utils::Timers::setTimer( $client,
-                Time::HiRes::time() + $interval_s, \&_pollDaemon );
+            _scheduleNextPoll( $client, $state );
         },
         sub {
             my ( $http_obj, $error ) = @_;
             $log->warn("HQPlayer status poll failed: $error");
 
             # Retry at normal interval even on error.
-            my $interval_s = ( $prefs->get('hqplayer_poll_ms') || 5000 ) / 1000;
-            Slim::Utils::Timers::setTimer( $client,
-                Time::HiRes::time() + $interval_s, \&_pollDaemon );
+            _scheduleNextPoll($client);
         },
         { timeout => 5 },
     );
@@ -181,6 +180,43 @@ sub _advanceQueue {
 
     $log->info('HQPlayer: track ended, advancing LMS queue');
     $client->execute( [ 'playlist', 'index', '+1' ] );
+}
+
+# ---------------------------------------------------------------------------
+# _scheduleNextPoll — schedule next /lms/status poll using adaptive interval.
+# ---------------------------------------------------------------------------
+sub _scheduleNextPoll {
+    my ( $client, $state ) = @_;
+    my $interval_ms = _nextPollIntervalMs($state);
+    my $interval_s  = $interval_ms / 1000;
+    Slim::Utils::Timers::setTimer( $client,
+        Time::HiRes::time() + $interval_s, \&_pollDaemon );
+}
+
+# Return configured poll interval (ms), with a safe fallback.
+sub _configuredPollMs {
+    my $configured = $prefs->get('hqplayer_poll_ms') || 5000;
+    return $configured > 0 ? $configured : 5000;
+}
+
+# Return the next poll interval (ms):
+# - playing: half of configured interval, floored at 500ms
+# - paused/stopped/unknown: configured interval
+sub _nextPollIntervalMs {
+    my ($state) = @_;
+    my $normal_ms = _configuredPollMs();
+    return $normal_ms unless defined $state && $state eq 'playing';
+
+    my $fast_ms = int( $normal_ms / 2 );
+    return $fast_ms < 500 ? 500 : $fast_ms;
+}
+
+# Extract "state" from /lms/status JSON.
+sub _extractState {
+    my ($body) = @_;
+    return undef unless defined $body;
+    return $1 if $body =~ /"state"\s*:\s*"(playing|paused|stopped)"/;
+    return undef;
 }
 
 # ---------------------------------------------------------------------------
@@ -207,4 +243,3 @@ sub _generateMac {
 }
 
 1;
-
