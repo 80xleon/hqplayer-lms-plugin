@@ -127,7 +127,28 @@ The `plugin/` directory is a standard Lyrion Music Server plugin.  It adds:
 - A **configuration page** under **Settings → HQPlayer** to edit the daemon's
   YAML file from the LMS web interface.
 
-### Install
+### Install via LMS Plugin Manager (recommended)
+
+The easiest way to install and keep the plugin up to date is via the built-in
+LMS plugin manager.
+
+1. Open the LMS web interface and go to **Settings → Plugins**.
+2. Scroll down to **Third-party Plugins** and paste the following URL into the
+   **Additional repositories** field:
+
+   ```
+   https://raw.githubusercontent.com/80xleon/hqplayer-lms-plugin/main/repository.xml
+   ```
+
+3. Click **Apply** and then find **HQPlayer** in the plugin list and click
+   **Install**.
+4. Restart LMS when prompted.
+5. Go to **Settings → HQPlayer** to open the configuration page.
+
+Once installed this way, LMS will notify you automatically whenever a new
+version is released and let you update with a single click.
+
+### Install manually
 
 1. Copy (or symlink) the `plugin/` directory into your LMS plugins folder and
    name it `HQPlayer`:
@@ -192,3 +213,38 @@ curl -s -X POST http://127.0.0.1:18080/lms/track \
 | `POST` | `/lms/stop`   | Stop playback. |
 | `POST` | `/lms/track`  | Load a source via `<PlayNextUri/>` (local file path or stream URI).  If HQPlayer is already playing, the daemon sends `<Stop/>` first so the new selection starts immediately.  Body: `{"path":"...", "title":"...", "artist":"...", "album":"..."}` — `path` is required; `title`, `artist`, and `album` are optional and forwarded to HQPlayer as Now Playing metadata.  Missing or empty `path` returns `400`.  HQPlayer errors return `502`. |
 | `POST` | `/lms/album`  | **Not yet implemented** — returns `501 Not Implemented`. Will be enabled once the HQPlayer Embedded XML API exposes a native album/playlist-load command. |
+
+---
+
+## 6) Releasing a new version
+
+This project uses GitHub Releases for distribution.  Every new version is
+automatically packaged and published by the GitHub Actions release workflow.
+
+### Steps to cut a release
+
+1. Update the version string in:
+   - `plugin/install.xml` (`<version>`)
+   - `plugin/Plugin.pm` (`sub _version`)
+
+2. Update `CHANGELOG.md` with the changes in this release.
+
+3. Commit and push those changes to `main`.
+
+4. Create and push a version tag:
+
+   ```bash
+   git tag v1.3.0
+   git push origin v1.3.0
+   ```
+
+The workflow (`.github/workflows/release.yml`) then:
+
+- Packs the `plugin/` directory into `HQPlayer.zip` with the directory
+  structure LMS expects (`HQPlayer/install.xml`, etc.).
+- Computes the SHA-1 digest of the archive.
+- Creates a GitHub Release named after the tag and attaches `HQPlayer.zip`.
+- Updates `repository.xml` in the repository with the new version, SHA-1,
+  and download URL, so the LMS plugin manager picks up the update
+  automatically.
+

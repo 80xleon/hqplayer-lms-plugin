@@ -1,0 +1,112 @@
+name: Release
+
+# Triggered whenever a version tag (v*) is pushed.
+# Steps:
+#   1. Pack the plugin/ directory into HQPlayer.zip (with the correct
+#      internal directory structure expected by LMS).
+#   2. Compute the SHA-1 digest of the archive (required by repository.xml).
+#   3. Create a GitHub Release and upload the archive as an asset.
+#   4. Regenerate repository.xml with the new version, SHA-1, and
+#      download URL, then commit and push it to the default branch so
+#      the LMS plugin manager always sees the latest release.
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          # Fetch the full history so we can push back to the default branch.
+          fetch-depth: 0
+
+      # -----------------------------------------------------------------------
+      # Derive plain version number from the tag (strip leading "v").
+      # -----------------------------------------------------------------------
+      - name: Extract version
+        id: version
+        run: |
+          TAG="${GITHUB_REF_NAME}"
+          VERSION="${TAG#v}"
+          echo "tag=$TAG"       >> "$GITHUB_OUTPUT"
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+
+      # -----------------------------------------------------------------------
+      # Build the zip archive.
+      # LMS expects:  <PluginName>/install.xml  at the root of the archive.
+      # -----------------------------------------------------------------------
+      - name: Build HQPlayer.zip
+        run: |
+          STAGING=$(mktemp -d)
+          cp -r plugin "$STAGING/HQPlayer"
+          cd "$STAGING"
+          zip -r "$GITHUB_WORKSPACE/HQPlayer.zip" HQPlayer/
+
+      # -----------------------------------------------------------------------
+      # Compute SHA-1 of the archive for repository.xml integrity check.
+      # -----------------------------------------------------------------------
+      - name: Compute SHA-1
+        id: sha1
+        run: |
+          SHA1=$(sha1sum HQPlayer.zip | awk '{print $1}')
+          echo "sha1=$SHA1" >> "$GITHUB_OUTPUT"
+
+      # -----------------------------------------------------------------------
+      # Create GitHub Release and upload the archive.
+      # -----------------------------------------------------------------------
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.version.outputs.tag }}
+          name: ${{ steps.version.outputs.tag }}
+          generate_release_notes: true
+          files: HQPlayer.zip
+
+      # -----------------------------------------------------------------------
+      # Regenerate repository.xml with up-to-date version / SHA-1 / URL.
+      # -----------------------------------------------------------------------
+      - name: Update repository.xml
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          TAG="${{ steps.version.outputs.tag }}"
+          SHA1="${{ steps.sha1.outputs.sha1 }}"
+          URL="https://github.com/${GITHUB_REPOSITORY}/releases/download/${TAG}/HQPlayer.zip"
+
+          cat > repository.xml <<XML
+<?xml version="1.0" encoding="utf-8"?>
+<extensions>
+  <plugins>
+    <plugin name="HQPlayer" version="${VERSION}" minTarget="8.0" maxTarget="*" sha="${SHA1}" url="${URL}">
+      <title lang="EN">HQPlayer</title>
+      <desc lang="EN">Adapter plugin to control HQPlayer Embedded 6.x via its HTTP API.</desc>
+      <creator>80xleon</creator>
+      <homepage>https://github.com/${GITHUB_REPOSITORY}</homepage>
+      <email></email>
+    </plugin>
+  </plugins>
+</extensions>
+XML
+
+      # -----------------------------------------------------------------------
+      # Commit and push the updated repository.xml to the default branch.
+      # -----------------------------------------------------------------------
+      - name: Commit repository.xml
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git fetch origin
+          DEFAULT_BRANCH=$(git remote show origin | awk '/HEAD branch/ {print $NF}')
+          git checkout "$DEFAULT_BRANCH"
+          git add repository.xml
+          git diff --cached --quiet && echo "No changes to commit" && exit 0
+          git commit -m "chore: update repository.xml for ${GITHUB_REF_NAME} [skip ci]"
+          git push origin "$DEFAULT_BRANCH"
