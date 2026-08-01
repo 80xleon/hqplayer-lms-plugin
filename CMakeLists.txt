@@ -5,11 +5,13 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
-if(POLICY CMP0167)
-    cmake_policy(SET CMP0167 NEW)
+find_package(Boost QUIET CONFIG)
+if(NOT Boost_FOUND)
+    if(POLICY CMP0167)
+        cmake_policy(SET CMP0167 OLD)
+    endif()
+    find_package(Boost REQUIRED)
 endif()
-
-find_package(Boost REQUIRED)
 find_package(Threads REQUIRED)
 
 add_library(hqplayer_core
