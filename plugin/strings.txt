@@ -147,8 +147,8 @@ HQPLAYER_HQP_POLL
 	FR	Intervalle de scrutation du statut (ms)
 
 HQPLAYER_HQP_POLL_DESC
-	EN	Base interval for daemon status polling, in milliseconds (500–60000). While playing, the LMS plugin polls /lms/status at half this interval (minimum 500ms).
-	FR	Intervalle de base de scrutation du daemon, en millisecondes (500–60000). Pendant la lecture, le plugin LMS interroge /lms/status à la moitié de cet intervalle (minimum 500 ms).
+	EN	Base interval for daemon status polling, in milliseconds (500–60000). While playing, LMS polls /lms/status adaptively: unknown duration => half interval (minimum 500ms); known duration => half interval only after 90% progress.
+	FR	Intervalle de base de scrutation du daemon, en millisecondes (500–60000). Pendant la lecture, LMS interroge /lms/status de façon adaptative : durée inconnue => moitié de l’intervalle (minimum 500 ms) ; durée connue => moitié de l’intervalle uniquement après 90 % de progression.
 
 HQPLAYER_ERR_HQP_HOST
 	EN	HQPlayer host must not be empty.

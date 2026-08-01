@@ -132,8 +132,10 @@ sub _startPolling {
 #               track_ended == true.
 #
 # Adaptive behavior:
-#   - while state == "playing", poll faster (half of configured interval,
-#     floored at 500ms) to reduce track-end handoff latency
+#   - while state == "playing" and track duration is unknown to LMS,
+#     poll faster (half of configured interval, floored at 500ms)
+#   - while state == "playing" and duration is known, use normal interval
+#     until 90% progress, then switch to faster interval
 #   - while paused/stopped/unknown, poll at configured interval
 # ---------------------------------------------------------------------------
 sub _pollDaemon {
@@ -187,7 +189,7 @@ sub _advanceQueue {
 # ---------------------------------------------------------------------------
 sub _scheduleNextPoll {
     my ( $client, $state ) = @_;
-    my $interval_ms = _nextPollIntervalMs($state);
+    my $interval_ms = _nextPollIntervalMs( $client, $state );
     my $interval_s  = $interval_ms / 1000;
     Slim::Utils::Timers::setTimer( $client,
         Time::HiRes::time() + $interval_s, \&_pollDaemon );
@@ -200,15 +202,22 @@ sub _configuredPollMs {
 }
 
 # Return the next poll interval (ms):
-# - playing: half of configured interval, floored at 500ms
+# - playing + unknown duration: half of configured interval, floored at 500ms
+# - playing + known duration:
+#     * < 90% progress => normal interval
+#     * >= 90% progress => half interval (min 500ms)
 # - paused/stopped/unknown: configured interval
 sub _nextPollIntervalMs {
-    my ($state) = @_;
+    my ( $client, $state ) = @_;
     my $normal_ms = _configuredPollMs();
     return $normal_ms unless defined $state && $state eq 'playing';
 
     my $fast_ms = int( $normal_ms / 2 );
-    return $fast_ms < 500 ? 500 : $fast_ms;
+    $fast_ms = 500 if $fast_ms < 500;
+
+    my $progress_ratio = _trackProgressRatio($client);
+    return $fast_ms unless defined $progress_ratio;     # duration unknown
+    return $progress_ratio >= 0.9 ? $fast_ms : $normal_ms;
 }
 
 # Extract state + track_ended from /lms/status JSON in one scan.
@@ -230,6 +239,68 @@ sub _extractStatusFields {
     }
 
     return ( $state, $track_ended );
+}
+
+# Return playback progress ratio [0..1], or undef if duration/elapsed unknown.
+sub _trackProgressRatio {
+    my ($client) = @_;
+    return undef unless $client;
+
+    my $elapsed  = _clientElapsedSeconds($client);
+    my $duration = _clientDurationSeconds($client);
+
+    return undef unless defined $elapsed && defined $duration;
+    return undef unless $duration > 0;
+
+    my $ratio = $elapsed / $duration;
+    $ratio = 0 if $ratio < 0;
+    $ratio = 1 if $ratio > 1;
+    return $ratio;
+}
+
+sub _clientElapsedSeconds {
+    my ($client) = @_;
+
+    for my $method (qw(songTime currentTime elapsedTime playingSongElapsed)) {
+        next unless $client->can($method);
+        my $value = eval { $client->$method() };
+        my $num   = _toPositiveNumberOrUndef($value);
+        return $num if defined $num;
+    }
+
+    return undef;
+}
+
+sub _clientDurationSeconds {
+    my ($client) = @_;
+
+    for my $method (qw(playingSongDuration duration trackDuration)) {
+        next unless $client->can($method);
+        my $value = eval { $client->$method() };
+        my $num   = _toPositiveNumberOrUndef($value);
+        return $num if defined $num;
+    }
+
+    for my $song_getter (qw(playingSong currentSong song)) {
+        next unless $client->can($song_getter);
+        my $song = eval { $client->$song_getter() };
+        next unless $song && ref $song;
+        for my $song_method (qw(duration secs lengthSeconds)) {
+            next unless $song->can($song_method);
+            my $value = eval { $song->$song_method() };
+            my $num   = _toPositiveNumberOrUndef($value);
+            return $num if defined $num;
+        }
+    }
+
+    return undef;
+}
+
+sub _toPositiveNumberOrUndef {
+    my ($value) = @_;
+    return undef unless defined $value;
+    return undef unless $value =~ /^-?(?:\d+(?:\.\d*)?|\.\d+)$/;
+    return $value + 0;
 }
 
 # ---------------------------------------------------------------------------
