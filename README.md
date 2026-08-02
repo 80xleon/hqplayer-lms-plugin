@@ -1,32 +1,36 @@
 # HQPlayer LMS Plugin
 
 End-to-end integration that registers a virtual player in Lyrion Music Server
-(LMS) and routes its audio through **HQPlayer Embedded** running on the same
-or a remote PC.
+(LMS), forwards transport commands through a lightweight local daemon, and
+routes playback through **HQPlayer Embedded** running on the same machine or a
+remote PC.
 
 ## Architecture
 
 ```
-LMS (Material skin)
+LMS UI + virtual player
   │  queue management, library browsing, transport UI
   │
-  ▼  HTTP  (localhost:18080)
-hqplayer_lms_daemon
-  │  C++ adapter daemon
-  │
-  ▼  XML/TCP  (hqplayer-host:4321)
-HQPlayer Embedded
-     high-quality upsampling / DAC output
+  ├─ POST /lms/play|pause|stop|track  ───────────────►  hqplayer_lms_daemon
+  │                                                    │
+  └─ GET /lms/events  (long-poll track-end wait)  ◄────┘
+                                                       │
+                                                       ├─ commands: XML/TCP (hqplayer-host:4321)
+                                                       ▼
+                                                 HQPlayer Embedded
+                                                       ▲
+                                                       └─ persistent status/event listener
+                                                          (<Status/> + pushed frames or reconnect)
 ```
 
 **Playback flow (per track)**
 
 1. User selects the **HQPlayer** virtual player in Material skin and taps Play on an album.
 2. LMS queues all tracks and calls `load()` on the virtual player with the first track source (local file or stream URL).
-3. The Perl player sends `POST /lms/track {"path":"...", "title":"...", "artist":"...", "album":"..."}` to the local daemon.
+3. The Perl player sends `POST /lms/track {"path":"...", "title":"...", "artist":"...", "album":"...", "coverart":"..."}` to the local daemon.
 4. The daemon sends `<PlayNextUri uri="..."/>` to HQPlayer Embedded via XML/TCP.  When already playing, it first sends `<Stop/>` so the newly selected track starts immediately instead of queueing.
-5. The daemon's status poller detects the `Playing → Stopped` transition when the track ends and sets `track_ended: true` in `GET /lms/status`.
-6. The plugin's Perl polling timer reads `track_ended: true` and calls `playlist index +1` on the LMS queue. While HQPlayer state is `playing`, it uses adaptive timing: if LMS does not know track duration it polls at half of the configured interval (minimum 500ms); if duration is known, it uses normal interval until 90% progress, then switches to half interval.
+5. The daemon's `HQPlayerEventListener` keeps a persistent XML/TCP connection to HQPlayer, sends an initial `<Status/>`, and updates cached status whenever HQPlayer returns a frame or the listener reconnects.
+6. The plugin holds one async `GET /lms/events` long-poll request open. When the daemon detects the `Playing → Stopped` transition, `/lms/events` returns `{"track_ended":true}` immediately and the plugin advances the LMS queue with near-zero latency before opening the next long-poll request.
 7. LMS calls `load()` again with the next track — repeat from step 3.
 
 **Source prerequisites**:
@@ -35,6 +39,9 @@ HQPlayer Embedded
   Embedded host (e.g. a shared NAS mount such as `/music` on both machines).
 - **Streaming sources** (for example LMS-proxied URLs): LMS can pass a stream
   URI to HQPlayer via `/lms/track`; HQPlayer then opens that URI directly.
+  When LMS-proxied URLs use `localhost` or `127.0.0.1`, the plugin rewrites
+  the origin to the actual LMS server address so a remote HQPlayer host can
+  still reach the LMS HTTP proxy.
 
 ---
 
@@ -177,7 +184,7 @@ version is released and let you update with a single click.
 | HQPlayer host | `127.0.0.1` | Hostname or IP of the machine running HQPlayer Embedded. |
 | HQPlayer XML control port | `4321` | TCP port of the HQPlayer XML control API (default 4321). |
 | Connection timeout (ms) | `3000` | Max time to wait for HQPlayer to respond (100–30000 ms). |
-| Status poll interval (ms) | `5000` | Base interval for daemon status polling (500–60000 ms); LMS plugin uses this value and adapts while playing: unknown duration => half interval (min 500 ms), known duration => half interval only after 90% progress. |
+| Status poll interval (ms) | `5000` | Legacy compatibility setting still written to `config.yaml`. Current releases use event-driven track-end handling via `/lms/events`, so queue advancement no longer depends on periodic LMS polling. |
 | Virtual player name | `HQPlayer` | Name shown for the player in the LMS player selector. |
 
 The top of the page also shows **live status indicators** — TCP probes to both
@@ -195,23 +202,25 @@ sudo systemctl restart hqplayer_lms_daemon
 
 ```bash
 curl -s http://127.0.0.1:18080/lms/status
+curl -s http://127.0.0.1:18080/lms/events
 curl -s -X POST http://127.0.0.1:18080/lms/play
 curl -s -X POST http://127.0.0.1:18080/lms/pause
 curl -s -X POST http://127.0.0.1:18080/lms/stop
 curl -s -X POST http://127.0.0.1:18080/lms/track \
      -H 'Content-Type: application/json' \
-     -d '{"path":"/music/Artist/Album/01.flac","title":"My Song","artist":"My Artist","album":"My Album"}'
+     -d '{"path":"/music/Artist/Album/01.flac","title":"My Song","artist":"My Artist","album":"My Album","coverart":"/music/Artist/Album/cover.jpg"}'
 ```
 
 ### Endpoint reference
 
 | Method | Path | Description |
 |--------|------|-------------|
-| `GET`  | `/lms/status` | Returns current playback state as JSON.  Includes `track_ended: true` once after a Playing→Stopped transition. |
+| `GET`  | `/lms/status` | Returns a snapshot of current playback state as JSON. Includes `track_ended: true` once if an unread Playing→Stopped transition was detected, but event-driven clients should prefer `/lms/events`. |
+| `GET`  | `/lms/events` | Long-poll endpoint used by the LMS plugin for track-end notifications. Waits up to 30 seconds for a Playing→Stopped transition, then returns `{"track_ended":true}`; otherwise returns `{"track_ended":false}` on timeout. |
 | `POST` | `/lms/play`   | Start or resume playback. |
 | `POST` | `/lms/pause`  | Pause playback. |
 | `POST` | `/lms/stop`   | Stop playback. |
-| `POST` | `/lms/track`  | Load a source via `<PlayNextUri/>` (local file path or stream URI).  If HQPlayer is already playing, the daemon sends `<Stop/>` first so the new selection starts immediately.  Body: `{"path":"...", "title":"...", "artist":"...", "album":"..."}` — `path` is required; `title`, `artist`, and `album` are optional and forwarded to HQPlayer as Now Playing metadata.  Missing or empty `path` returns `400`.  HQPlayer errors return `502`. |
+| `POST` | `/lms/track`  | Load a source via `<PlayNextUri/>` (local file path or stream URI). If HQPlayer is already playing, the daemon sends `<Stop/>` first so the new selection starts immediately. Body: `{"path":"...", "title":"...", "artist":"...", "album":"...", "coverart":"..."}` — `path` is required; `title`, `artist`, `album`, and `coverart` are optional and forwarded to HQPlayer as Now Playing metadata. For LMS-proxied streaming URLs, `localhost` / `127.0.0.1` origins are rewritten to the LMS server address before forwarding. Missing or empty `path` returns `400`. HQPlayer errors return `502`. |
 | `POST` | `/lms/album`  | **Not yet implemented** — returns `501 Not Implemented`. Will be enabled once the HQPlayer Embedded XML API exposes a native album/playlist-load command. |
 
 ---
@@ -247,4 +256,3 @@ The workflow (`.github/workflows/release.yml`) then:
 - Updates `repository.xml` in the repository with the new version, SHA-1,
   and download URL, so the LMS plugin manager picks up the update
   automatically.
-

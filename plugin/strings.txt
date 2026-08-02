@@ -7,8 +7,8 @@ HQPLAYER_NAME
 	FR	HQPlayer
 
 HQPLAYER_DESC
-	EN	Adapter plugin to control HQPlayer Embedded 6.x via its HTTP API.
-	FR	Plugin d'adaptation pour contrôler HQPlayer Embedded 6.x via son API HTTP.
+	EN	Virtual player plugin that drives HQPlayer Embedded 6.x through a local HTTP daemon and its XML/TCP control API.
+	FR	Plugin de lecteur virtuel qui pilote HQPlayer Embedded 6.x via un daemon HTTP local et son API de contrôle XML/TCP.
 
 HQPLAYER_SETTINGS
 	EN	HQPlayer Settings
@@ -147,8 +147,8 @@ HQPLAYER_HQP_POLL
 	FR	Intervalle de scrutation du statut (ms)
 
 HQPLAYER_HQP_POLL_DESC
-	EN	Base interval for daemon status polling, in milliseconds (500–60000). While playing, LMS polls /lms/status adaptively: unknown duration => half interval (minimum 500ms); known duration => half interval only after 90% progress.
-	FR	Intervalle de base de scrutation du daemon, en millisecondes (500–60000). Pendant la lecture, LMS interroge /lms/status de façon adaptative : durée inconnue => moitié de l’intervalle (minimum 500 ms) ; durée connue => moitié de l’intervalle uniquement après 90 % de progression.
+	EN	Legacy compatibility setting written to config.yaml (500–60000 ms). Current releases use event-driven track-end notifications via /lms/events instead of adaptive LMS polling.
+	FR	Paramètre de compatibilité hérité écrit dans config.yaml (500–60000 ms). Les versions actuelles utilisent des notifications de fin de piste pilotées par événements via /lms/events au lieu d’une scrutation LMS adaptative.
 
 HQPLAYER_ERR_HQP_HOST
 	EN	HQPlayer host must not be empty.

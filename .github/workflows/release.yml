@@ -87,7 +87,7 @@ jobs:
   <plugins>
     <plugin name="HQPlayer" version="${VERSION}" minTarget="8.0" maxTarget="*" sha="${SHA1}" url="${URL}">
       <title lang="EN">HQPlayer</title>
-      <desc lang="EN">Adapter plugin to control HQPlayer Embedded 6.x via its HTTP API.</desc>
+      <desc lang="EN">Virtual player plugin that drives HQPlayer Embedded 6.x through a local HTTP daemon and its XML/TCP control API.</desc>
       <creator>80xleon</creator>
       <homepage>https://github.com/${GITHUB_REPOSITORY}</homepage>
       <email></email>
