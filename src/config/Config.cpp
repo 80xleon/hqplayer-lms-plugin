@@ -120,20 +120,6 @@ AppConfig parseConfigText(const std::string& text) {
             }
             continue;
         }
-
-        if (section == "hqplayer" && key == "poll_interval_ms") {
-            try {
-                const auto parsed = std::stoul(value);
-                if (parsed == 0) {
-                    throw std::out_of_range("range");
-                }
-                cfg.hqplayer.poll_interval_ms = static_cast<std::uint32_t>(parsed);
-            } catch (const std::exception&) {
-                throw std::invalid_argument(
-                    "Invalid config value hqplayer.poll_interval_ms='" + value + "': expected > 0");
-            }
-            continue;
-        }
     }
 
     validateHost(cfg.lms_adapter.host);

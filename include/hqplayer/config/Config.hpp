@@ -26,9 +26,6 @@ struct HQPlayerConfig {
 
     /// Socket send/receive timeout in milliseconds.
     std::uint32_t timeout_ms{3000};
-
-    /// How often the sync layer polls HQPlayer for status, in milliseconds.
-    std::uint32_t poll_interval_ms{5000};
 };
 
 struct AppConfig {

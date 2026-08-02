@@ -142,14 +142,6 @@ HQPLAYER_HQP_TIMEOUT_DESC
 	EN	Maximum time in milliseconds to wait for a response from HQPlayer (100–30000).
 	FR	Durée maximale en millisecondes pour attendre une réponse de HQPlayer (100–30000).
 
-HQPLAYER_HQP_POLL
-	EN	Status poll interval (ms)
-	FR	Intervalle de scrutation du statut (ms)
-
-HQPLAYER_HQP_POLL_DESC
-	EN	Legacy compatibility setting written to config.yaml (500–60000 ms). Current releases use event-driven track-end notifications via /lms/events instead of adaptive LMS polling.
-	FR	Paramètre de compatibilité hérité écrit dans config.yaml (500–60000 ms). Les versions actuelles utilisent des notifications de fin de piste pilotées par événements via /lms/events au lieu d’une scrutation LMS adaptative.
-
 HQPLAYER_ERR_HQP_HOST
 	EN	HQPlayer host must not be empty.
 	FR	L'hôte HQPlayer ne peut pas être vide.
@@ -161,10 +153,6 @@ HQPLAYER_ERR_HQP_PORT
 HQPLAYER_ERR_HQP_TIMEOUT
 	EN	Invalid connection timeout: must be a positive integer (milliseconds).
 	FR	Délai de connexion invalide : doit être un entier positif (millisecondes).
-
-HQPLAYER_ERR_HQP_POLL
-	EN	Invalid poll interval: must be a positive integer (milliseconds).
-	FR	Intervalle de scrutation invalide : doit être un entier positif (millisecondes).
 
 HQPLAYER_PLAYER_NAME
 	EN	Virtual player name

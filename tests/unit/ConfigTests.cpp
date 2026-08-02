@@ -37,7 +37,6 @@ lms_adapter:
     assertTrue(cfg.hqplayer.host == "127.0.0.1", "hqplayer.host default should be 127.0.0.1");
     assertTrue(cfg.hqplayer.port == 4321, "hqplayer.port default should be 4321");
     assertTrue(cfg.hqplayer.timeout_ms == 3000, "hqplayer.timeout_ms default should be 3000");
-    assertTrue(cfg.hqplayer.poll_interval_ms == 5000, "hqplayer.poll_interval_ms default should be 5000");
 }
 
 void testHQPlayerSection() {
@@ -49,13 +48,11 @@ hqplayer:
   host: 192.168.1.10
   port: 4321
   timeout_ms: 2000
-  poll_interval_ms: 3000
 )");
 
     assertTrue(cfg.hqplayer.host == "192.168.1.10", "hqplayer.host should parse");
     assertTrue(cfg.hqplayer.port == 4321, "hqplayer.port should parse");
     assertTrue(cfg.hqplayer.timeout_ms == 2000, "hqplayer.timeout_ms should parse");
-    assertTrue(cfg.hqplayer.poll_interval_ms == 3000, "hqplayer.poll_interval_ms should parse");
 }
 
 void testInvalidHQPlayerPortThrows() {

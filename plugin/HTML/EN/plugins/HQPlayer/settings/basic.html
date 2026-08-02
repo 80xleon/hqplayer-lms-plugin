@@ -183,24 +183,6 @@
         <p class="field-desc">[% 'HQPLAYER_HQP_TIMEOUT_DESC' | string %]</p>
     </div>
 
-    <!-- HQPlayer status poll interval -->
-    <div class="setting">
-        <label for="pref_hqplayer_poll_ms">
-            [% 'HQPLAYER_HQP_POLL' | string %]
-        </label>
-        <input
-            type="number"
-            id="pref_hqplayer_poll_ms"
-            name="pref_hqplayer_poll_ms"
-            value="[% params.pref_hqplayer_poll_ms | html %]"
-            required
-            min="500"
-            max="60000"
-            step="500"
-        />
-        <p class="field-desc">[% 'HQPLAYER_HQP_POLL_DESC' | string %]</p>
-    </div>
-
     <!-- ------------------------------------------------------------------ -->
     <!-- Section: Virtual player                                            -->
     <!-- ------------------------------------------------------------------ -->

@@ -44,7 +44,6 @@ $prefs->init(
         hqplayer_host        => '127.0.0.1',
         hqplayer_port        => 4321,
         hqplayer_timeout_ms  => 3000,
-        hqplayer_poll_ms     => 5000,
         player_name          => 'HQPlayer',
     }
 );
