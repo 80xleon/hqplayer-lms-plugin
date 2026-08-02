@@ -61,7 +61,6 @@ hqplayer:
   host: 192.168.1.50   # hostname/IP of the machine running HQPlayer Embedded
   port: 4321           # HQPlayer XML control port (default 4321)
   timeout_ms: 3000
-  poll_interval_ms: 5000
 ```
 
 `lms_adapter.host` is the bind address for the daemon's HTTP server (must be
@@ -184,7 +183,6 @@ version is released and let you update with a single click.
 | HQPlayer host | `127.0.0.1` | Hostname or IP of the machine running HQPlayer Embedded. |
 | HQPlayer XML control port | `4321` | TCP port of the HQPlayer XML control API (default 4321). |
 | Connection timeout (ms) | `3000` | Max time to wait for HQPlayer to respond (100–30000 ms). |
-| Status poll interval (ms) | `5000` | Legacy compatibility setting still written to `config.yaml`. Current releases use event-driven track-end handling via `/lms/events`, so queue advancement no longer depends on periodic LMS polling. |
 | Virtual player name | `HQPlayer` | Name shown for the player in the LMS player selector. |
 
 The top of the page also shows **live status indicators** — TCP probes to both

@@ -2,6 +2,19 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.3.1] - 2026-08-02
+
+### Removed — poll_interval_ms setting
+
+- Removed the `hqplayer.poll_interval_ms` / `hqplayer_poll_ms` setting from all
+  layers: the LMS plugin settings page, `Settings.pm`, `Plugin.pm`, `strings.txt`,
+  `Config.hpp`, `Config.cpp`, and `ConfigTests.cpp`.
+- The setting was already unused in practice — since v1.3.0 the plugin uses the
+  event-driven `/lms/events` long-poll endpoint rather than a timer-based poll.
+- Updated README and all inline documentation to reflect the removal.
+
+---
+
 ## [1.3.0] - 2026-08-02
 
 ### Changed — event-driven track-end detection (replaces adaptive polling)

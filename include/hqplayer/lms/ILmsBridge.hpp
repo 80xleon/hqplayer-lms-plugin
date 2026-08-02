@@ -7,11 +7,19 @@
 
 namespace hqplayer::lms {
 
+/// Pure interface between the LMS HTTP adapter and a HQPlayer back-end.
+///
+/// Implementations translate LMS transport commands and track-load requests
+/// into the appropriate HQPlayer API calls and maintain a cached status that
+/// the HTTP adapter can return without blocking on a live query.
 class ILmsBridge {
 public:
     virtual ~ILmsBridge() = default;
 
+    /// Dispatch a transport command (Play, Pause, Stop) to HQPlayer.
     virtual void handleCommand(LmsCommand command) = 0;
+
+    /// @return A snapshot of the most recently cached playback status.
     virtual LmsStatus currentStatus() const = 0;
 
     /// Load a single track by filesystem path (or URL) and start playback.
