@@ -3,9 +3,10 @@ package Plugins::HQPlayer::Plugin;
 # HQPlayer LMS Plugin — main entry point.
 #
 # Registers the plugin with Lyrion Music Server, wires the web settings
-# page, creates a virtual HQPlayer player client, and starts a polling
-# timer that detects track-end events so LMS can advance its queue
-# automatically.
+# page, creates a virtual HQPlayer player client, and listens for
+# track-end events via the daemon's /lms/events long-poll endpoint.
+# When the daemon signals that HQPlayer has stopped (track ended), the
+# plugin advances the LMS queue to the next track.
 
 use strict;
 use warnings;
@@ -76,7 +77,7 @@ sub getDisplayName { 'HQPLAYER_NAME' }
 # ---------------------------------------------------------------------------
 # _version — helper returning the version string from install.xml.
 # ---------------------------------------------------------------------------
-sub _version { '1.2.0' }
+sub _version { '1.3.0' }
 
 # ---------------------------------------------------------------------------
 # prefs — accessor used by Settings.pm and tests.
@@ -96,11 +97,11 @@ sub _registerVirtualPlayer {
     my $name = $prefs->get('player_name') || 'HQPlayer';
 
     # If the player already exists (e.g. after a plugin reload), just make
-    # sure polling is running and bail out.
+    # sure event listening is running and bail out.
     my $existing = Slim::Player::Client::getClient($mac);
     if ($existing) {
         $log->info("HQPlayer virtual player already registered ($mac)");
-        _startPolling($existing);
+        _startListening($existing);
         return;
     }
 
@@ -116,29 +117,31 @@ sub _registerVirtualPlayer {
 
     $log->info("HQPlayer virtual player registered as '$name' ($mac)");
 
-    _startPolling($client);
+    _startListening($client);
 }
 
 # ---------------------------------------------------------------------------
-# _startPolling — schedule the first status poll for $client.
+# _startListening — begin the /lms/events long-poll loop for $client.
 # ---------------------------------------------------------------------------
-sub _startPolling {
+sub _startListening {
     my ($client) = @_;
-    _scheduleNextPoll($client);
+    _listenForTrackEnd($client);
 }
 
 # ---------------------------------------------------------------------------
-# _pollDaemon — timer callback: GET /lms/status and advance the queue on
-#               track_ended == true.
+# _listenForTrackEnd — send one async GET /lms/events request.
 #
-# Adaptive behavior:
-#   - while state == "playing" and track duration is unknown to LMS,
-#     poll faster (half of configured interval, floored at 500ms)
-#   - while state == "playing" and duration is known, use normal interval
-#     until 90% progress, then switch to faster interval
-#   - while paused/stopped/unknown, poll at configured interval
+# The daemon blocks for up to 30 seconds waiting for a Playing→Stopped
+# transition from HQPlayer.  When the response arrives:
+#   - track_ended:true  → advance the LMS queue, then immediately reconnect.
+#   - track_ended:false → the request timed out; immediately reconnect.
+#   - error             → wait 2 s and reconnect to avoid hammering the daemon.
+#
+# This replaces the former adaptive polling timer: instead of periodically
+# checking /lms/status, the plugin is notified the instant HQPlayer signals
+# a state change, resulting in gapless-ready queue advancement.
 # ---------------------------------------------------------------------------
-sub _pollDaemon {
+sub _listenForTrackEnd {
     my ($client) = @_;
 
     my $host = $prefs->get('lms_host') // '127.0.0.1';
@@ -148,27 +151,33 @@ sub _pollDaemon {
         sub {
             my ($http_obj) = @_;
 
-            # Minimal JSON decode — avoid hard dependency on a JSON module.
             my $body = $http_obj->content // '';
-            my ( $state, $track_ended ) = _extractStatusFields($body);
-            if ($track_ended) {
+
+            # {"track_ended":true} → advance the LMS queue.
+            if ( $body =~ /"track_ended"\s*:\s*true/ ) {
                 _advanceQueue($client);
             }
 
-            # Reschedule for next poll.
-            _scheduleNextPoll( $client, $state );
+            # Immediately start the next long-poll.
+            _listenForTrackEnd($client);
         },
         sub {
             my ( $http_obj, $error ) = @_;
-            $log->warn("HQPlayer status poll failed: $error");
+            $log->warn("HQPlayer /lms/events failed: $error");
 
-            # Retry at normal interval even on error.
-            _scheduleNextPoll($client);
+            # Brief delay before retrying so we don't hammer a down daemon.
+            Slim::Utils::Timers::setTimer(
+                $client,
+                Time::HiRes::time() + 2,
+                sub { _listenForTrackEnd($client); },
+            );
         },
-        { timeout => 5 },
+        # The daemon's /lms/events blocks for up to 30 s; give it 35 s before
+        # we consider the request timed-out at the HTTP layer.
+        { timeout => 35 },
     );
 
-    $http->get("http://$host:$port/lms/status");
+    $http->get("http://$host:$port/lms/events");
 }
 
 # ---------------------------------------------------------------------------
@@ -182,125 +191,6 @@ sub _advanceQueue {
 
     $log->info('HQPlayer: track ended, advancing LMS queue');
     $client->execute( [ 'playlist', 'index', '+1' ] );
-}
-
-# ---------------------------------------------------------------------------
-# _scheduleNextPoll — schedule next /lms/status poll using adaptive interval.
-# ---------------------------------------------------------------------------
-sub _scheduleNextPoll {
-    my ( $client, $state ) = @_;
-    my $interval_ms = _nextPollIntervalMs( $client, $state );
-    my $interval_s  = $interval_ms / 1000;
-    Slim::Utils::Timers::setTimer( $client,
-        Time::HiRes::time() + $interval_s, \&_pollDaemon );
-}
-
-# Return configured poll interval (ms), with a safe fallback.
-sub _configuredPollMs {
-    my $configured = $prefs->get('hqplayer_poll_ms') || 5000;
-    return $configured > 0 ? $configured : 5000;
-}
-
-# Return the next poll interval (ms):
-# - playing + unknown duration: half of configured interval, floored at 500ms
-# - playing + known duration:
-#     * < 90% progress => normal interval
-#     * >= 90% progress => half interval (min 500ms)
-# - paused/stopped/unknown: configured interval
-sub _nextPollIntervalMs {
-    my ( $client, $state ) = @_;
-    my $normal_ms = _configuredPollMs();
-    return $normal_ms unless defined $state && $state eq 'playing';
-
-    my $fast_ms = int( $normal_ms / 2 );
-    $fast_ms = 500 if $fast_ms < 500;
-
-    my $progress_ratio = _trackProgressRatio($client);
-    return $fast_ms unless defined $progress_ratio;     # duration unknown
-    return $progress_ratio >= 0.9 ? $fast_ms : $normal_ms;
-}
-
-# Extract state + track_ended from /lms/status JSON in one scan.
-sub _extractStatusFields {
-    my ($body) = @_;
-    return ( undef, 0 ) unless defined $body;
-
-    my $state;
-    my $track_ended = 0;
-    while ( $body =~ /"(state|track_ended)"\s*:\s*("(?:playing|paused|stopped)"|true|false)/g ) {
-        my ( $key, $value ) = ( $1, $2 );
-        if ( $key eq 'state' ) {
-            $value =~ s/^"|"$//g;
-            $state = $value;
-        }
-        elsif ( $key eq 'track_ended' ) {
-            $track_ended = ( $value eq 'true' ) ? 1 : 0;
-        }
-    }
-
-    return ( $state, $track_ended );
-}
-
-# Return playback progress ratio [0..1], or undef if duration/elapsed unknown.
-sub _trackProgressRatio {
-    my ($client) = @_;
-    return undef unless $client;
-
-    my $elapsed  = _clientElapsedSeconds($client);
-    my $duration = _clientDurationSeconds($client);
-
-    return undef unless defined $elapsed && defined $duration;
-    return undef unless $duration > 0;
-
-    my $ratio = $elapsed / $duration;
-    $ratio = 0 if $ratio < 0;
-    $ratio = 1 if $ratio > 1;
-    return $ratio;
-}
-
-sub _clientElapsedSeconds {
-    my ($client) = @_;
-
-    for my $method (qw(songTime currentTime elapsedTime playingSongElapsed)) {
-        next unless $client->can($method);
-        my $value = eval { $client->$method() };
-        my $num   = _toPositiveNumberOrUndef($value);
-        return $num if defined $num;
-    }
-
-    return undef;
-}
-
-sub _clientDurationSeconds {
-    my ($client) = @_;
-
-    for my $method (qw(playingSongDuration duration trackDuration)) {
-        next unless $client->can($method);
-        my $value = eval { $client->$method() };
-        my $num   = _toPositiveNumberOrUndef($value);
-        return $num if defined $num;
-    }
-
-    for my $song_getter (qw(playingSong currentSong song)) {
-        next unless $client->can($song_getter);
-        my $song = eval { $client->$song_getter() };
-        next unless $song && ref $song;
-        for my $song_method (qw(duration secs lengthSeconds)) {
-            next unless $song->can($song_method);
-            my $value = eval { $song->$song_method() };
-            my $num   = _toPositiveNumberOrUndef($value);
-            return $num if defined $num;
-        }
-    }
-
-    return undef;
-}
-
-sub _toPositiveNumberOrUndef {
-    my ($value) = @_;
-    return undef unless defined $value;
-    return undef unless $value =~ /^-?(?:\d+(?:\.\d*)?|\.\d+)$/;
-    return $value + 0;
 }
 
 # ---------------------------------------------------------------------------

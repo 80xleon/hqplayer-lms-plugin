@@ -63,13 +63,17 @@ public:
     /// @throws HQPlayerError on network or protocol error.
     HQPlayerStatus getStatus() override;
 
+    /// Parse a {@code <Status .../>} XML string into HQPlayerStatus.
+    ///
+    /// Exposed as public so that HQPlayerEventListener can reuse the same
+    /// parsing logic when processing status frames received on a persistent
+    /// connection.
+    static HQPlayerStatus parseStatusXml(const std::string& xml);
+
 private:
     /// Open a TCP connection, send @p xmlCommand, read full response and return it.
     /// The XML declaration is prepended automatically.
     std::string sendAndReceive(const std::string& xmlCommand) const;
-
-    /// Parse a {@code <Status .../>} XML string into HQPlayerStatus.
-    static HQPlayerStatus parseStatusXml(const std::string& xml);
 
     /// Parse a transport command result XML and throw HQPlayerError on failure.
     static void verifyResult(const std::string& xml, const std::string& commandName);

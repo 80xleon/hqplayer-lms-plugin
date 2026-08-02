@@ -61,7 +61,7 @@ void LmsBridge::handleCommand(LmsCommand command) {
         break;
 
     case LmsCommand::Status:
-        // Status is maintained by HQPlayerSync; nothing to do here.
+        // Status is maintained by HQPlayerEventListener; nothing to do here.
         break;
     }
 }
@@ -75,12 +75,12 @@ void LmsBridge::updateCachedStatus(const ::hqplayer::hqplayer::HQPlayerStatus& s
     std::lock_guard<std::mutex> lock(mutex_);
     const std::string newState = stateToString(status.state);
 
-    // Detect Playing→Stopped transition and set the track-ended flag so
-    // the Perl polling loop can advance the LMS queue.
+    // Detect Playing→Stopped transition and notify waiting long-poll threads.
     if (cached_.state == "playing" && newState == "stopped") {
         track_ended_flag_ = true;
         Logger::instance().log(LogLevel::Info,
             "LmsBridge: Playing→Stopped transition detected — track ended");
+        track_ended_cv_.notify_all();
     }
 
     cached_.state         = newState;
@@ -163,6 +163,26 @@ bool LmsBridge::consumeTrackEnded() {
     const bool v = track_ended_flag_;
     track_ended_flag_ = false;
     return v;
+}
+
+bool LmsBridge::waitForTrackEnded(std::chrono::milliseconds timeout) {
+    std::unique_lock<std::mutex> lock(mutex_);
+    const bool signaled = track_ended_cv_.wait_for(lock, timeout, [this] {
+        return track_ended_flag_ || abort_waits_;
+    });
+    if (signaled && track_ended_flag_ && !abort_waits_) {
+        track_ended_flag_ = false;
+        return true;
+    }
+    return false;
+}
+
+void LmsBridge::abortWaits() {
+    {
+        std::lock_guard<std::mutex> lock(mutex_);
+        abort_waits_ = true;
+    }
+    track_ended_cv_.notify_all();
 }
 
 } // namespace hqplayer::lms

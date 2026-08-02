@@ -5,10 +5,12 @@
 #include <atomic>
 #include <condition_variable>
 #include <cstdint>
+#include <future>
 #include <memory>
 #include <mutex>
 #include <string>
 #include <thread>
+#include <vector>
 
 #include <boost/asio/io_context.hpp>
 #include <boost/asio/ip/tcp.hpp>
@@ -44,6 +46,10 @@ private:
     std::condition_variable start_cv_;
     bool start_done_{false};
     std::string start_error_;
+
+    /// Futures for outstanding /lms/events long-poll threads.
+    std::mutex                   event_futures_mutex_;
+    std::vector<std::future<void>> event_futures_;
 };
 
 } // namespace hqplayer::lms

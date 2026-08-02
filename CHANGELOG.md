@@ -2,6 +2,61 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.3.0] - 2026-08-02
+
+### Changed — event-driven track-end detection (replaces adaptive polling)
+
+**C++ daemon**
+- Replaced `HQPlayerSync` (periodic `<Status/>` poll) with `HQPlayerEventListener`:
+  a persistent-connection listener that opens a single TCP socket to HQPlayer
+  Embedded, sends an initial `<Status/>`, and then reads XML frames continuously.
+  - If HQPlayer pushes unsolicited state-change notifications on the same
+    connection, they are processed immediately (true push model).
+  - If HQPlayer closes the connection after the first response (current
+    behaviour), the listener reconnects automatically and re-queries — same
+    result as polling but without a fixed timer.
+  - Reconnection uses exponential back-off (initial 1 s, cap 30 s).
+  - `HQPlayerSync.hpp` is kept as a backward-compat alias (`using HQPlayerSync = HQPlayerEventListener`).
+- Added `LmsBridge::waitForTrackEnded(timeout)`: blocks using a `std::condition_variable`
+  until a Playing→Stopped transition is detected or the timeout elapses.
+  The flag is consumed atomically when the method returns `true`.
+- Added `LmsBridge::abortWaits()`: wakes all threads blocked in `waitForTrackEnded()`
+  — called by `LmsHttpAdapter::stop()` to ensure clean shutdown.
+- Added `GET /lms/events` long-poll endpoint to `LmsHttpAdapter`:
+  - Blocks for up to 30 seconds in a dedicated `std::async` thread so the
+    accept loop can serve concurrent requests (e.g. `/lms/track`) without stalling.
+  - Returns `{"track_ended":true}` the instant HQPlayer signals end-of-track,
+    or `{"track_ended":false}` after the 30 s timeout.
+  - Outstanding event threads are joined cleanly in `LmsHttpAdapter::stop()`.
+- `HQPlayerClient::parseStatusXml` promoted to `public` so `HQPlayerEventListener`
+  can reuse the same XML parsing without duplication.
+
+**Perl plugin**
+- Removed the adaptive polling timer (`_pollDaemon`, `_scheduleNextPoll`,
+  `_nextPollIntervalMs`, `_configuredPollMs`, `_extractStatusFields`,
+  `_trackProgressRatio`, `_clientElapsedSeconds`, `_clientDurationSeconds`,
+  `_toPositiveNumberOrUndef`).
+- Replaced with `_listenForTrackEnd`: a single async `GET /lms/events` request
+  (35 s HTTP timeout) that re-fires itself in the success callback.  Queue
+  advancement now happens with near-zero latency from the moment HQPlayer stops.
+
+**Tests**
+- New `HQPlayerEventListenerTests` (replaces `HQPlayerSyncTests`):
+  - Verifies cached status is updated from a pushed XML frame.
+  - Verifies the observer callback is invoked.
+  - Verifies automatic reconnect after a connection close.
+  - Verifies multiple XML frames on a single connection are each parsed.
+  - Verifies stop() is idempotent and clean.
+  - Verifies connect errors trigger back-off without calling the observer.
+- New `testEventsEndpoint` integration test:
+  - Verifies `GET /lms/events` returns `track_ended:true` immediately when
+    the flag is already set.
+  - Verifies the flag is consumed so a subsequent `/lms/status` sees `false`.
+  - Verifies `GET /lms/events` unblocks promptly when a transition is fired
+    from a background thread (< 5 s round-trip).
+
+---
+
 ## [1.2.0] - 2026-08-01
 
 ### Added

@@ -4,6 +4,8 @@
 #include "hqplayer/hqplayer/IHQPlayerClient.hpp"
 #include "hqplayer/lms/ILmsBridge.hpp"
 
+#include <chrono>
+#include <condition_variable>
 #include <mutex>
 
 namespace hqplayer::lms {
@@ -14,8 +16,14 @@ namespace hqplayer::lms {
 /// IHQPlayerClient.  The most-recent status is kept in an internal
 /// cache that is updated either:
 ///  - optimistically on each handled command (immediate feedback), or
-///  - externally via updateCachedStatus() (called by HQPlayerSync on
-///    each successful poll).
+///  - externally via updateCachedStatus() (called by HQPlayerEventListener on
+///    each received notification).
+///
+/// When HQPlayerEventListener detects a Playing→Stopped transition, it calls
+/// updateCachedStatus() which sets an internal flag and notifies any thread
+/// waiting in waitForTrackEnded().  The LMS HTTP adapter's /lms/events
+/// long-poll endpoint blocks in waitForTrackEnded() until the flag fires,
+/// then returns a JSON response to the Perl plugin.
 ///
 /// Thread-safe.
 class LmsBridge final : public ILmsBridge {
@@ -51,18 +59,35 @@ public:
     /// @throws std::runtime_error   if the HQPlayer backend cannot fulfil the request.
     void handleAlbumPlay(const std::string& albumPath) override;
 
-    /// Update the cached status from an external source (e.g. HQPlayerSync).
+    /// Update the cached status from an external source (HQPlayerEventListener).
     ///
-    /// Detects Playing→Stopped transitions and sets an internal flag that
-    /// consumeTrackEnded() can read.
+    /// Detects Playing→Stopped transitions and sets an internal flag, then
+    /// notifies any threads waiting in waitForTrackEnded().
     void updateCachedStatus(const ::hqplayer::hqplayer::HQPlayerStatus& status);
 
     /// Atomically read and reset the track-ended flag.
     ///
     /// Returns true once when a Playing→Stopped transition was detected since
     /// the last call.  Subsequent calls return false until the next transition.
-    /// Called by LmsHttpAdapter when building the /lms/status JSON response.
+    /// Used by LmsHttpAdapter when building the /lms/status JSON response.
     bool consumeTrackEnded();
+
+    /// Block until a track-ended event is detected or @p timeout elapses.
+    ///
+    /// Returns true when a Playing→Stopped transition is detected (and
+    /// consumes the flag so it is not reported a second time).  Returns false
+    /// on timeout.  Also returns false immediately when abortWaits() has been
+    /// called.
+    ///
+    /// Used by the /lms/events long-poll endpoint so the Perl plugin is
+    /// notified the instant a track ends rather than on the next poll cycle.
+    bool waitForTrackEnded(std::chrono::milliseconds timeout);
+
+    /// Wake up all threads currently blocked in waitForTrackEnded().
+    ///
+    /// Called by LmsHttpAdapter::stop() to unblock any outstanding long-poll
+    /// connections before the adapter tears down.
+    void abortWaits();
 
 private:
     void setOptimisticState(const std::string& state);
@@ -71,6 +96,8 @@ private:
     mutable std::mutex                     mutex_;
     LmsStatus                              cached_{};
     bool                                   track_ended_flag_{false};
+    bool                                   abort_waits_{false};
+    std::condition_variable                track_ended_cv_;
 };
 
 } // namespace hqplayer::lms

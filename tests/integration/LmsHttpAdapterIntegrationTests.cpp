@@ -304,6 +304,78 @@ void testTrackEndedFlag() {
     adapter.stop();
 }
 
+void testEventsEndpoint() {
+    NullHQPlayerClient nullClient;
+    hqplayer::lms::LmsBridge bridge(nullClient);
+    hqplayer::lms::LmsHttpAdapter adapter(bridge, "127.0.0.1", 0);
+    adapter.start();
+
+    const auto port = adapter.boundPort();
+
+    // --- Test 1: /lms/events should return track_ended:true immediately when
+    //             a Playing→Stopped transition is already pending.
+    {
+        hqplayer::hqplayer::HQPlayerStatus playing;
+        playing.state = hqplayer::hqplayer::HQPlayerState::Playing;
+        bridge.updateCachedStatus(playing);
+
+        hqplayer::hqplayer::HQPlayerStatus stopped;
+        stopped.state = hqplayer::hqplayer::HQPlayerState::Stopped;
+        bridge.updateCachedStatus(stopped); // sets track_ended_flag_
+
+        // The long-poll should unblock immediately because the flag is already set.
+        auto resp = sendRequest(port, http::verb::get, "/lms/events");
+        assertTrue(resp.result() == http::status::ok,
+                   "GET /lms/events should return 200");
+        assertTrue(resp.body().find("\"track_ended\":true") != std::string::npos,
+                   "GET /lms/events should return track_ended:true when transition occurred");
+    }
+
+    // --- Test 2: /lms/events should return track_ended:false after timeout
+    //             (we use a very short timeout by triggering the event from a
+    //             separate thread after a tiny delay, then checking the consumed
+    //             flag is cleared).
+    // Verify that the flag was consumed (reset to false) by the first /lms/events.
+    {
+        auto status = sendRequest(port, http::verb::get, "/lms/status");
+        assertTrue(status.body().find("\"track_ended\":false") != std::string::npos,
+                   "track_ended flag should be consumed after /lms/events returned true");
+    }
+
+    // --- Test 3: fire a track-ended event from a background thread while
+    //             /lms/events is long-polling; the response should arrive promptly.
+    {
+        // Reset bridge to playing state.
+        hqplayer::hqplayer::HQPlayerStatus playing;
+        playing.state = hqplayer::hqplayer::HQPlayerState::Playing;
+        bridge.updateCachedStatus(playing);
+
+        // Fire the transition from a background thread after 100 ms.
+        std::thread trigger([&bridge]() {
+            std::this_thread::sleep_for(std::chrono::milliseconds(100));
+            hqplayer::hqplayer::HQPlayerStatus stopped;
+            stopped.state = hqplayer::hqplayer::HQPlayerState::Stopped;
+            bridge.updateCachedStatus(stopped);
+        });
+
+        const auto start = std::chrono::steady_clock::now();
+        auto resp = sendRequest(port, http::verb::get, "/lms/events");
+        const auto elapsed = std::chrono::steady_clock::now() - start;
+
+        trigger.join();
+
+        assertTrue(resp.result() == http::status::ok,
+                   "GET /lms/events should return 200 on triggered event");
+        assertTrue(resp.body().find("\"track_ended\":true") != std::string::npos,
+                   "GET /lms/events should return track_ended:true on triggered transition");
+        // Should have responded in much less than 30 s (the long-poll timeout).
+        assertTrue(elapsed < std::chrono::seconds(5),
+                   "GET /lms/events should respond promptly when event is triggered");
+    }
+
+    adapter.stop();
+}
+
 } // namespace
 
 int main() {
@@ -313,6 +385,7 @@ int main() {
         testTrackEndpoint();
         testTrackMetadataPassthrough();
         testTrackEndedFlag();
+        testEventsEndpoint();
         testInvalidHostAtStart();
         return 0;
     } catch (const std::exception& e) {

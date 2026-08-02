@@ -8,6 +8,9 @@
 #include <boost/beast/core.hpp>
 #include <boost/beast/http.hpp>
 
+#include <chrono>
+#include <future>
+#include <memory>
 #include <optional>
 #include <stdexcept>
 #include <string>
@@ -109,6 +112,9 @@ void LmsHttpAdapter::stop() {
         return;
     }
 
+    // Wake up any threads blocking in waitForTrackEnded() so they exit promptly.
+    bridge_.abortWaits();
+
     std::string wake_host;
     std::uint16_t wake_port = 0;
     {
@@ -146,6 +152,18 @@ void LmsHttpAdapter::stop() {
 
     if (worker_.joinable()) {
         worker_.join();
+    }
+
+    // Wait for all outstanding /lms/events long-poll threads to finish.
+    // abortWaits() already unblocked them so this should be instantaneous.
+    {
+        std::lock_guard<std::mutex> efLock(event_futures_mutex_);
+        for (auto& f : event_futures_) {
+            if (f.valid()) {
+                f.wait();
+            }
+        }
+        event_futures_.clear();
     }
 }
 
@@ -236,11 +254,48 @@ void LmsHttpAdapter::run() {
             http::read(socket, buffer, request, ec);
 
             http::response<http::string_body> response;
+            bool asyncHandled = false;
+
             if (ec) {
                 response = makeJsonResponse(http::status::bad_request, "{\"error\":\"bad request\"}");
             } else if (request.method() == http::verb::get && request.target() == "/lms/status") {
                 bridge_.handleCommand(LmsCommand::Status);
                 response = makeJsonResponse(http::status::ok, statusJson());
+            } else if (request.method() == http::verb::get && request.target() == "/lms/events") {
+                // Long-poll: block in a separate thread until a track-ended event
+                // is signalled by HQPlayerEventListener, or 30 s elapse.  The
+                // accept loop continues immediately so other connections are not
+                // blocked while this one is waiting.
+                auto s = std::make_shared<tcp::socket>(std::move(socket));
+                {
+                    // Prune completed futures before adding a new one.
+                    std::lock_guard<std::mutex> efLock(event_futures_mutex_);
+                    event_futures_.erase(
+                        std::remove_if(event_futures_.begin(), event_futures_.end(),
+                            [](std::future<void>& f) {
+                                return f.wait_for(std::chrono::seconds(0)) ==
+                                       std::future_status::ready;
+                            }),
+                        event_futures_.end());
+
+                    event_futures_.push_back(
+                        std::async(std::launch::async, [this, s]() {
+                            const bool ended =
+                                bridge_.waitForTrackEnded(std::chrono::seconds(30));
+                            if (!running_.load()) {
+                                return;
+                            }
+                            const std::string json =
+                                std::string("{\"track_ended\":") +
+                                (ended ? "true" : "false") + "}";
+                            auto resp = makeJsonResponse(http::status::ok, json);
+                            boost::system::error_code ecW;
+                            http::write(*s, resp, ecW);
+                            boost::system::error_code ecS;
+                            s->shutdown(tcp::socket::shutdown_both, ecS);
+                        }));
+                }
+                asyncHandled = true;
             } else if (request.method() == http::verb::post && request.target() == "/lms/play") {
                 bridge_.handleCommand(LmsCommand::Play);
                 response = makeJsonResponse(http::status::ok, "{\"ok\":true}");
@@ -305,8 +360,10 @@ void LmsHttpAdapter::run() {
                 response = makeJsonResponse(http::status::not_found, "{\"error\":\"not found\"}");
             }
 
-            http::write(socket, response, ec);
-            socket.shutdown(tcp::socket::shutdown_both, ec);
+            if (!asyncHandled) {
+                http::write(socket, response, ec);
+                socket.shutdown(tcp::socket::shutdown_both, ec);
+            }
         }
 
         Logger::instance().log(LogLevel::Info, "LMS HTTP adapter stopped");
