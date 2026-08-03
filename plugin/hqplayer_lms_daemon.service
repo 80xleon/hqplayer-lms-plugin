@@ -21,7 +21,7 @@ StartLimitIntervalSec=60s
 
 # Prevent the daemon from writing outside its expected directories.
 ProtectSystem=full
-ReadWritePaths=/etc/hqplayer
+ReadWritePaths=/etc/hqplayer /var/log/hqplayer
 
 [Install]
 WantedBy=multi-user.target

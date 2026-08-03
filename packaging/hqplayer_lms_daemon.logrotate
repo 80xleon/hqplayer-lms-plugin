@@ -1,0 +1,46 @@
+# logrotate configuration for the HQPlayer LMS Adapter Daemon.
+#
+# Install:
+#   sudo cp packaging/hqplayer_lms_daemon.logrotate \
+#            /etc/logrotate.d/hqplayer_lms_daemon
+#
+# This file only takes effect when a log_path is configured in config.yaml
+# (logging.log_path).  Adjust the path below to match that value.
+#
+# logrotate is typically run daily by cron or systemd-timers; rotation
+# happens when the file grows beyond 10 MB or every week, whichever comes
+# first.
+
+/var/log/hqplayer/hqplayer_lms_daemon.log {
+    # Rotate when the file exceeds 10 MB.
+    size 10M
+
+    # Also rotate weekly even if the file has not reached the size limit.
+    weekly
+
+    # Keep four weeks of compressed archives.
+    rotate 4
+
+    # Compress rotated logs (uses gzip by default).
+    compress
+
+    # Do not compress the most-recently rotated file so it is still
+    # human-readable without decompression immediately after rotation.
+    delaycompress
+
+    # Do nothing if the log file is missing (daemon may not be running).
+    missingok
+
+    # Do not rotate an empty log file.
+    notifempty
+
+    # Create a fresh log file with the correct ownership after rotation.
+    # Adjust the user/group if the daemon runs under a different account.
+    create 0640 squeezeboxserver squeezeboxserver
+
+    # Tell the daemon to re-open its log file after rotation so it starts
+    # writing to the new file.  The daemon is signalled via systemd.
+    postrotate
+        systemctl kill --signal=HUP hqplayer_lms_daemon 2>/dev/null || true
+    endscript
+}

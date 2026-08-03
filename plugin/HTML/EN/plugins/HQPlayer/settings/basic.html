@@ -115,7 +115,7 @@
             [% 'HQPLAYER_LOG_LEVEL' | string %]
         </label>
         <select id="pref_log_level" name="pref_log_level" required>
-            [% FOREACH lvl IN ['trace', 'debug', 'info', 'warn', 'error'] %]
+            [% FOREACH lvl IN ['none', 'trace', 'debug', 'info', 'warn', 'error'] %]
             <option value="[% lvl %]"
                 [% IF params.pref_log_level == lvl %]selected="selected"[% END %]>
                 [% lvl %]
@@ -123,6 +123,29 @@
             [% END %]
         </select>
         <p class="field-desc">[% 'HQPLAYER_LOG_LEVEL_DESC' | string %]</p>
+    </div>
+
+    <!-- Log file path -->
+    <div class="setting">
+        <label for="pref_log_path">
+            [% 'HQPLAYER_LOG_PATH' | string %]
+        </label>
+        <input
+            type="text"
+            id="pref_log_path"
+            name="pref_log_path"
+            value="[% params.pref_log_path | html %]"
+            placeholder="/var/log/hqplayer/hqplayer_lms_daemon.log"
+            size="50"
+        />
+        <p class="field-desc">[% 'HQPLAYER_LOG_PATH_DESC' | string %]</p>
+        [% IF params.pref_log_path %]
+        <p>
+            <a href="file://[% params.pref_log_path | html %]" target="_blank" rel="noopener">
+                [% 'HQPLAYER_LOG_OPEN' | string %]
+            </a>
+        </p>
+        [% END %]
     </div>
 
     <!-- ------------------------------------------------------------------ -->

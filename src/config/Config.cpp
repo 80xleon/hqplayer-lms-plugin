@@ -68,6 +68,11 @@ AppConfig parseConfigText(const std::string& text) {
             continue;
         }
 
+        if (section == "logging" && key == "log_path") {
+            cfg.logging.log_path = value;
+            continue;
+        }
+
         if (section == "lms_adapter" && key == "host") {
             validateHost(value);
             cfg.lms_adapter.host = value;

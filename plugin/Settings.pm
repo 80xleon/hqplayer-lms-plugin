@@ -23,7 +23,7 @@ my $prefs = preferences('plugin.hqplayer');
 # ---------------------------------------------------------------------------
 # Valid log-level values — must match the enum accepted by Config.cpp.
 # ---------------------------------------------------------------------------
-my %VALID_LOG_LEVELS = map { $_ => 1 } qw(trace debug info warn error);
+my %VALID_LOG_LEVELS = map { $_ => 1 } qw(none trace debug info warn error);
 
 # ---------------------------------------------------------------------------
 # page — Template Toolkit template path (relative to HTML root).
@@ -34,7 +34,7 @@ sub page { 'plugins/HQPlayer/settings/basic.html' }
 # prefs — list of preference keys managed by this settings page.
 # ---------------------------------------------------------------------------
 sub prefs {
-    return ( $prefs, qw(config_path lms_host lms_port log_level hqplayer_host hqplayer_port hqplayer_timeout_ms player_name) );
+    return ( $prefs, qw(config_path lms_host lms_port log_level log_path hqplayer_host hqplayer_port hqplayer_timeout_ms player_name) );
 }
 
 # ---------------------------------------------------------------------------
@@ -70,6 +70,7 @@ sub handler {
     $params->{'pref_lms_host'}            = $prefs->get('lms_host');
     $params->{'pref_lms_port'}            = $prefs->get('lms_port');
     $params->{'pref_log_level'}           = $prefs->get('log_level');
+    $params->{'pref_log_path'}            = $prefs->get('log_path');
     $params->{'pref_hqplayer_host'}       = $prefs->get('hqplayer_host');
     $params->{'pref_hqplayer_port'}       = $prefs->get('hqplayer_port');
     $params->{'pref_hqplayer_timeout_ms'} = $prefs->get('hqplayer_timeout_ms');
@@ -145,6 +146,7 @@ sub _persistPrefs {
     $prefs->set( 'lms_host',             _trim( $params->{'pref_lms_host'} ) );
     $prefs->set( 'lms_port',             int( $params->{'pref_lms_port'} ) );
     $prefs->set( 'log_level',            lc( _trim( $params->{'pref_log_level'} ) ) );
+    $prefs->set( 'log_path',             _trim( $params->{'pref_log_path'} // '' ) );
     $prefs->set( 'hqplayer_host',        _trim( $params->{'pref_hqplayer_host'} ) );
     $prefs->set( 'hqplayer_port',        int( $params->{'pref_hqplayer_port'} ) );
     $prefs->set( 'hqplayer_timeout_ms',  int( $params->{'pref_hqplayer_timeout_ms'} ) );
@@ -163,6 +165,7 @@ sub _writeConfig {
     my $host        = $prefs->get('lms_host');
     my $port        = $prefs->get('lms_port');
     my $level       = $prefs->get('log_level');
+    my $log_path    = $prefs->get('log_path') // '';
     my $hqp_host    = $prefs->get('hqplayer_host');
     my $hqp_port    = $prefs->get('hqplayer_port');
     my $hqp_timeout = $prefs->get('hqplayer_timeout_ms');
@@ -170,9 +173,10 @@ sub _writeConfig {
     # Build the YAML content.  The Config.cpp parser is a simple line-by-line
     # reader; indentation must use two spaces and section headers must end with
     # a colon (no trailing space).
+    my $log_path_line = length($log_path) ? "\n  log_path: $log_path" : '';
     my $yaml = <<"END_YAML";
 logging:
-  level: $level
+  level: $level$log_path_line
 
 lms_adapter:
   host: $host

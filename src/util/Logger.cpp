@@ -22,12 +22,32 @@ LogLevel Logger::level() const {
     return level_;
 }
 
+void Logger::setLogPath(const std::string& path) {
+    std::lock_guard<std::mutex> lock(mutex_);
+    if (log_file_.is_open()) {
+        log_file_.close();
+    }
+    if (!path.empty()) {
+        log_file_.open(path, std::ios::app);
+        if (!log_file_) {
+            throw std::runtime_error("Cannot open log file: " + path);
+        }
+    }
+}
+
 void Logger::log(LogLevel level, const std::string& message) {
     std::lock_guard<std::mutex> lock(mutex_);
+    if (level_ == LogLevel::None) {
+        return;
+    }
     if (static_cast<int>(level) < static_cast<int>(level_)) {
         return;
     }
     std::clog << message << std::endl;
+    if (log_file_.is_open()) {
+        log_file_ << message << '\n';
+        log_file_.flush();
+    }
 }
 
 LogLevel Logger::parseLevel(const std::string& level) {
@@ -35,6 +55,9 @@ LogLevel Logger::parseLevel(const std::string& level) {
     std::transform(normalized.begin(), normalized.end(), normalized.begin(),
                    [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
 
+    if (normalized == "none") {
+        return LogLevel::None;
+    }
     if (normalized == "trace") {
         return LogLevel::Trace;
     }

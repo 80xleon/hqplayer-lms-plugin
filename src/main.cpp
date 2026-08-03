@@ -15,6 +15,9 @@ int main(int argc, char** argv) {
     try {
         const auto config = hqplayer::config::parseConfigFile(config_path);
         hqplayer::util::Logger::instance().setLevel(config.logging.level);
+        if (!config.logging.log_path.empty()) {
+            hqplayer::util::Logger::instance().setLogPath(config.logging.log_path);
+        }
 
         hqplayer::hqplayer::HQPlayerClient hqpClient(config.hqplayer);
 

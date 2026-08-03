@@ -122,6 +122,27 @@ sudo systemctl edit hqplayer_lms_daemon
 # Group=yourgroup
 ```
 
+### Log rotation (optional)
+
+When you configure a **Log file path** in the plugin settings, the daemon
+writes to a file on disk.  To prevent it from growing unbounded, install the
+provided logrotate rule:
+
+```bash
+# Create the log directory (adjust user/group if needed).
+sudo mkdir -p /var/log/hqplayer
+sudo chown squeezeboxserver:squeezeboxserver /var/log/hqplayer
+
+# Install the logrotate rule.
+sudo cp packaging/hqplayer_lms_daemon.logrotate \
+        /etc/logrotate.d/hqplayer_lms_daemon
+```
+
+The rule rotates at **10 MB** or **weekly**, keeps **4 compressed archives**,
+and sends `SIGHUP` to the daemon after rotation so it re-opens the log file
+without a restart.  Edit `/etc/logrotate.d/hqplayer_lms_daemon` to adjust the
+path, size, or retention if needed.
+
 ---
 
 ## 4) LMS Plugin Installation
@@ -179,7 +200,8 @@ version is released and let you update with a single click.
 | Config file path | `/etc/hqplayer/config.yaml` | Absolute path where the plugin writes the YAML file. |
 | Bind host | `127.0.0.1` | IP address the daemon binds to (IPv4 or IPv6). |
 | Port | `18080` | TCP port for the daemon's HTTP server (1–65535). |
-| Log level | `info` | Daemon log verbosity: `trace`, `debug`, `info`, `warn`, `error`. |
+| Log level | `info` | Daemon log verbosity: `none`, `trace`, `debug`, `info`, `warn`, `error`. Use `none` to disable all logging. |
+| Log file path | *(empty)* | Optional absolute path for a persistent log file (e.g. `/var/log/hqplayer/hqplayer_lms_daemon.log`). Leave empty to log to the system journal only. When set, a clickable link appears on the settings page to open the file in a new browser tab. |
 | HQPlayer host | `127.0.0.1` | Hostname or IP of the machine running HQPlayer Embedded. |
 | HQPlayer XML control port | `4321` | TCP port of the HQPlayer XML control API (default 4321). |
 | Connection timeout (ms) | `3000` | Max time to wait for HQPlayer to respond (100–30000 ms). |

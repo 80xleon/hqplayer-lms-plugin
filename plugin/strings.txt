@@ -43,8 +43,20 @@ HQPLAYER_LOG_LEVEL
 	FR	Niveau de journalisation
 
 HQPLAYER_LOG_LEVEL_DESC
-	EN	Verbosity of the daemon log output.
-	FR	Verbosité de la sortie du journal du daemon.
+	EN	Verbosity of the daemon log output. Use "none" to disable all logging.
+	FR	Verbosité de la sortie du journal du daemon. Utilisez « none » pour désactiver toute journalisation.
+
+HQPLAYER_LOG_PATH
+	EN	Log file path
+	FR	Chemin du fichier journal
+
+HQPLAYER_LOG_PATH_DESC
+	EN	Optional absolute path to a log file (e.g. /var/log/hqplayer/hqplayer_lms_daemon.log). Leave empty to log to the system journal only. The directory must be writable by the daemon user.
+	FR	Chemin absolu optionnel vers un fichier journal (ex. /var/log/hqplayer/hqplayer_lms_daemon.log). Laisser vide pour journaliser uniquement dans le journal système. Le répertoire doit être accessible en écriture par l'utilisateur du daemon.
+
+HQPLAYER_LOG_OPEN
+	EN	Open log file in new tab ↗
+	FR	Ouvrir le fichier journal dans un nouvel onglet ↗
 
 HQPLAYER_SAVE
 	EN	Save
@@ -63,8 +75,8 @@ HQPLAYER_ERR_PORT
 	FR	Port invalide : doit être un entier compris entre 1 et 65535.
 
 HQPLAYER_ERR_LOG_LEVEL
-	EN	Invalid log level: choose one of trace, debug, info, warn, error.
-	FR	Niveau de journalisation invalide : choisir parmi trace, debug, info, warn, error.
+	EN	Invalid log level: choose one of none, trace, debug, info, warn, error.
+	FR	Niveau de journalisation invalide : choisir parmi none, trace, debug, info, warn, error.
 
 HQPLAYER_ERR_CONFIG_PATH
 	EN	Config path must not be empty.

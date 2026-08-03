@@ -10,6 +10,11 @@ namespace hqplayer::config {
 /// Logging configuration loaded from the @c logging: YAML section.
 struct LoggingConfig {
     hqplayer::util::LogLevel level{hqplayer::util::LogLevel::Info};
+
+    /// Optional path to a log file.  When non-empty the daemon appends log
+    /// messages to this file in addition to @c stdout.  Leave empty to log
+    /// to stdout only (default, suitable for journald).
+    std::string log_path{};
 };
 
 /// Network settings for the daemon's HTTP server, loaded from the
