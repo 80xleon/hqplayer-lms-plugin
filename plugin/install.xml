@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    HQPlayer LMS Plugin — manifest for Lyrion Music Server plugin loader.
+    The <name> must match the Perl package prefix (Plugins::HQPlayer).
+-->
+<extension>
+    <details>
+        <name>HQPlayer</name>
+        <version>1.3.0</version>
+        <author>80xleon</author>
+        <description>HQPLAYER_DESC</description>
+        <homepageURL>https://github.com/80xleon/hqplayer-lms-plugin</homepageURL>
+        <email></email>
+    </details>
+    <minTarget>8.0</minTarget>
+    <maxTarget>*</maxTarget>
+</extension>

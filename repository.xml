@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  HQPlayer LMS Plugin — repository descriptor for the Lyrion Music Server
+  plugin manager.
+
+  Add this URL to your LMS plugin manager:
+    https://raw.githubusercontent.com/80xleon/hqplayer-lms-plugin/main/repository.xml
+
+  This file is updated automatically by the GitHub Actions release workflow
+  every time a new version tag (v*) is pushed to the repository.
+  Do NOT edit it by hand — your changes will be overwritten on the next release.
+-->
+<extensions>
+  <plugins>
+    <plugin name="HQPlayer" version="0.0.0" minTarget="8.0" maxTarget="*"
+            sha="0000000000000000000000000000000000000000"
+            url="https://github.com/80xleon/hqplayer-lms-plugin/releases/download/v0.0.0/HQPlayer.zip">
+      <title lang="EN">HQPlayer</title>
+      <desc lang="EN">Virtual player plugin that drives HQPlayer Embedded 6.x through a local HTTP daemon and its XML/TCP control API.</desc>
+      <creator>80xleon</creator>
+      <homepage>https://github.com/80xleon/hqplayer-lms-plugin</homepage>
+      <email></email>
+    </plugin>
+  </plugins>
+</extensions>

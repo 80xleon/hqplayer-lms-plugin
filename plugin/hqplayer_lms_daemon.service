@@ -1,0 +1,27 @@
+[Unit]
+Description=HQPlayer LMS Adapter Daemon
+Documentation=https://github.com/80xleon/hqplayer-lms-plugin
+After=network.target
+
+[Service]
+Type=simple
+# Run as the same user that owns the config file.
+# Override with: sudo systemctl edit hqplayer_lms_daemon
+User=squeezeboxserver
+Group=squeezeboxserver
+
+# Path to the config.yaml written by the LMS plugin settings page.
+ExecStart=/usr/local/bin/hqplayer_lms_daemon /etc/hqplayer/config.yaml
+
+# Restart automatically on crash; give up after 5 rapid restarts.
+Restart=on-failure
+RestartSec=5s
+StartLimitBurst=5
+StartLimitIntervalSec=60s
+
+# Prevent the daemon from writing outside its expected directories.
+ProtectSystem=full
+ReadWritePaths=/etc/hqplayer /var/log/hqplayer
+
+[Install]
+WantedBy=multi-user.target

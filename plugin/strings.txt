@@ -1,0 +1,179 @@
+# String table for the HQPlayer LMS plugin.
+# Format: TOKEN<TAB>LANGUAGE<newline><TAB>Translation<newline>
+# Supported languages: EN (required), FR
+
+HQPLAYER_NAME
+	EN	HQPlayer
+	FR	HQPlayer
+
+HQPLAYER_DESC
+	EN	Virtual player plugin that drives HQPlayer Embedded 6.x through a local HTTP daemon and its XML/TCP control API.
+	FR	Plugin de lecteur virtuel qui pilote HQPlayer Embedded 6.x via un daemon HTTP local et son API de contrôle XML/TCP.
+
+HQPLAYER_SETTINGS
+	EN	HQPlayer Settings
+	FR	Paramètres HQPlayer
+
+HQPLAYER_CONFIG_PATH
+	EN	Config file path
+	FR	Chemin du fichier de configuration
+
+HQPLAYER_CONFIG_PATH_DESC
+	EN	Absolute path to the config.yaml file that the HQPlayer daemon reads at startup.
+	FR	Chemin absolu vers le fichier config.yaml lu par le daemon HQPlayer au démarrage.
+
+HQPLAYER_LMS_HOST
+	EN	Bind host
+	FR	Adresse d'écoute
+
+HQPLAYER_LMS_HOST_DESC
+	EN	IP address on which the HQPlayer daemon binds its HTTP server (e.g. 127.0.0.1 or 0.0.0.0).
+	FR	Adresse IP sur laquelle le daemon HQPlayer démarre son serveur HTTP (ex. 127.0.0.1 ou 0.0.0.0).
+
+HQPLAYER_LMS_PORT
+	EN	Port
+	FR	Port
+
+HQPLAYER_LMS_PORT_DESC
+	EN	TCP port for the daemon HTTP server (1–65535).
+	FR	Port TCP du serveur HTTP du daemon (1–65535).
+
+HQPLAYER_LOG_LEVEL
+	EN	Log level
+	FR	Niveau de journalisation
+
+HQPLAYER_LOG_LEVEL_DESC
+	EN	Verbosity of the daemon log output. Use "none" to disable all logging.
+	FR	Verbosité de la sortie du journal du daemon. Utilisez « none » pour désactiver toute journalisation.
+
+HQPLAYER_LOG_PATH
+	EN	Log file path
+	FR	Chemin du fichier journal
+
+HQPLAYER_LOG_PATH_DESC
+	EN	Optional absolute path to a log file (e.g. /var/log/hqplayer/hqplayer_lms_daemon.log). Leave empty to log to the system journal only. The directory must be writable by the daemon user.
+	FR	Chemin absolu optionnel vers un fichier journal (ex. /var/log/hqplayer/hqplayer_lms_daemon.log). Laisser vide pour journaliser uniquement dans le journal système. Le répertoire doit être accessible en écriture par l'utilisateur du daemon.
+
+HQPLAYER_LOG_OPEN
+	EN	Open log file in new tab ↗
+	FR	Ouvrir le fichier journal dans un nouvel onglet ↗
+
+HQPLAYER_SAVE
+	EN	Save
+	FR	Enregistrer
+
+HQPLAYER_SAVED
+	EN	Settings saved and config.yaml written successfully.
+	FR	Paramètres sauvegardés et config.yaml écrit avec succès.
+
+HQPLAYER_ERR_HOST
+	EN	Invalid bind host: must be a valid IPv4 or IPv6 address.
+	FR	Adresse d'écoute invalide : doit être une adresse IPv4 ou IPv6 valide.
+
+HQPLAYER_ERR_PORT
+	EN	Invalid port: must be an integer between 1 and 65535.
+	FR	Port invalide : doit être un entier compris entre 1 et 65535.
+
+HQPLAYER_ERR_LOG_LEVEL
+	EN	Invalid log level: choose one of none, trace, debug, info, warn, error.
+	FR	Niveau de journalisation invalide : choisir parmi none, trace, debug, info, warn, error.
+
+HQPLAYER_ERR_CONFIG_PATH
+	EN	Config path must not be empty.
+	FR	Le chemin du fichier de configuration ne peut pas être vide.
+
+HQPLAYER_ERR_WRITE
+	EN	Failed to write config.yaml:
+	FR	Impossible d'écrire config.yaml :
+
+HQPLAYER_DAEMON_STATUS
+	EN	Daemon status
+	FR	État du daemon
+
+HQPLAYER_DAEMON_UP
+	EN	● Reachable — daemon is running
+	FR	● Joignable — le daemon est actif
+
+HQPLAYER_DAEMON_DOWN
+	EN	○ Unreachable — daemon is not running
+	FR	○ Injoignable — le daemon n'est pas actif
+
+HQPLAYER_DAEMON_STATUS_DESC
+	EN	Live check: the plugin attempts a TCP connection to the configured host and port.
+	FR	Vérification en direct : le plugin tente une connexion TCP sur l'hôte et le port configurés.
+
+HQPLAYER_SECTION_LMS
+	EN	LMS Adapter Daemon
+	FR	Daemon adaptateur LMS
+
+HQPLAYER_SECTION_HQP
+	EN	HQPlayer Embedded Connection
+	FR	Connexion HQPlayer Embedded
+
+HQPLAYER_SECTION_PLAYER
+	EN	Virtual Player
+	FR	Lecteur Virtuel
+
+HQPLAYER_HQP_STATUS
+	EN	HQPlayer status
+	FR	État HQPlayer
+
+HQPLAYER_HQP_UP
+	EN	● Reachable — HQPlayer is running
+	FR	● Joignable — HQPlayer est actif
+
+HQPLAYER_HQP_DOWN
+	EN	○ Unreachable — HQPlayer is not running
+	FR	○ Injoignable — HQPlayer n'est pas actif
+
+HQPLAYER_HQP_STATUS_DESC
+	EN	Live check: the plugin attempts a TCP connection to the HQPlayer XML control port.
+	FR	Vérification en direct : le plugin tente une connexion TCP sur le port de contrôle XML HQPlayer.
+
+HQPLAYER_HQP_HOST
+	EN	HQPlayer host
+	FR	Hôte HQPlayer
+
+HQPLAYER_HQP_HOST_DESC
+	EN	Hostname or IP address of the machine running HQPlayer Embedded (e.g. 127.0.0.1 or hqplayer.local).
+	FR	Nom d'hôte ou adresse IP de la machine exécutant HQPlayer Embedded (ex. 127.0.0.1 ou hqplayer.local).
+
+HQPLAYER_HQP_PORT
+	EN	HQPlayer XML control port
+	FR	Port de contrôle XML HQPlayer
+
+HQPLAYER_HQP_PORT_DESC
+	EN	TCP port of the HQPlayer XML control API (default 4321).
+	FR	Port TCP de l'API de contrôle XML HQPlayer (défaut 4321).
+
+HQPLAYER_HQP_TIMEOUT
+	EN	Connection timeout (ms)
+	FR	Délai de connexion (ms)
+
+HQPLAYER_HQP_TIMEOUT_DESC
+	EN	Maximum time in milliseconds to wait for a response from HQPlayer (100–30000).
+	FR	Durée maximale en millisecondes pour attendre une réponse de HQPlayer (100–30000).
+
+HQPLAYER_ERR_HQP_HOST
+	EN	HQPlayer host must not be empty.
+	FR	L'hôte HQPlayer ne peut pas être vide.
+
+HQPLAYER_ERR_HQP_PORT
+	EN	Invalid HQPlayer port: must be an integer between 1 and 65535.
+	FR	Port HQPlayer invalide : doit être un entier compris entre 1 et 65535.
+
+HQPLAYER_ERR_HQP_TIMEOUT
+	EN	Invalid connection timeout: must be a positive integer (milliseconds).
+	FR	Délai de connexion invalide : doit être un entier positif (millisecondes).
+
+HQPLAYER_PLAYER_NAME
+	EN	Virtual player name
+	FR	Nom du lecteur virtuel
+
+HQPLAYER_PLAYER_NAME_DESC
+	EN	Name shown for the HQPlayer virtual player in the LMS player selector (Material skin and others).
+	FR	Nom affiché pour le lecteur virtuel HQPlayer dans le sélecteur de lecteur LMS (skin Material et autres).
+
+HQPLAYER_ERR_PLAYER_NAME
+	EN	Player name must not be empty.
+	FR	Le nom du lecteur ne peut pas être vide.
